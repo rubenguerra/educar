@@ -1,52 +1,83 @@
 {% extends 'base.html' %}
 
-{% block title %}Sala de chat para "{{ course.title }}"{% endblock %}
-
-{% block content %}
-<div id="chat">
-</div>
-
-{{ request.user.username|json_script:"user-name-data" }}
-
-<div id="chat-input">
-    <input type="text" id="chat-message-input">
-    <input type="submit" value="Enviar" id="chat-message-submit">
-</div>
+{% block title %}
+    Sala de Chat: {{ course.title }}
 {% endblock %}
 
+{% block content %}
+<h1>Sala de chat - {{ course.title }}</h1>
+
+<!-- Contenedor del Chat -->
+<div id="chat" style="border: 1px solid #ccc; padding: 15px; height: 400px; overflow-y: scroll; margin-bottom: 20px;">
+
+    <!-- 1. RENDERIZADO DEL HISTORIAL DE MENSAJES (BASE DE DATOS) -->
+    {% for message in chat_messages %}
+        <div class="message {% if message.user == request.user %}me{% else %}other{% endif %}">
+            <strong>
+                {% if message.user == request.user %}Me{% else %}{{ message.user.username }}{% endif %}
+            </strong>
+            <span class="date">{{ message.created|date:"g:i A" }}</span>
+            <br>
+            <span>{{ message.message|linebreaksbr }}</span>
+        </div>
+    {% empty %}
+        <p id="no-messages">No hay mensajes en esta sala. ¡Sé el primero en escribir!</p>
+    {% endfor %}
+</div>
+
+<!-- Formulario para enviar nuevos mensajes -->
+<form id="chat-form">
+    <div style="display: flex; gap: 10px;">
+        <input id="chat-message-input" type="text" placeholder="Escribe un mensaje aquí..." style="flex-grow: 1; padding: 10px;" autocomplete="off">
+        <input id="chat-message-submit" type="submit" value="Enviar" style="padding: 10px 20px;">
+    </div>
+</form>
+
+<!-- Pasamos el usuario de forma segura a JavaScript -->
+{{ request.user.username|json_script:"user-name-data" }}
+{% endblock %}
+
+
 {% block domready %}
+// 1. Configuración inicial del WebSocket
 var url = 'ws://' + window.location.host + '/ws/chat/room/' + '{{ course.id }}/';
 var chatSocket = new WebSocket(url);
 
 const currentUser = JSON.parse(document.getElementById('user-name-data').textContent);
+const $chat = $('#chat');
 
+// Auto-scroll inicial para ver el historial más reciente abajo
+$chat.scrollTop($chat[0].scrollHeight);
+
+// 2. Recepción de mensajes en tiempo real
 chatSocket.onmessage = function(e){
     const data = JSON.parse(e.data);
     const message = data.message;
 
-    // 2. Control de fallos por si 'datetime' llega vacío desde el servidor
+    // Removemos el aviso de "No hay mensajes" si aparece el primero en vivo
+    $('#no-messages').remove();
+
+    // Control de fallos para la fecha
     const dateSource = data.datetime ? new Date(data.datetime) : new Date();
     const dateOptions = { hour: 'numeric', minute: 'numeric', hour12: true };
     const datetime = dateSource.toLocaleString('en', dateOptions);
 
-    // 3. Verificación de identidad
+    // Verificación de identidad
     const isMe = data.user === currentUser;
     const source = isMe ? 'me' : 'other';
     const name = isMe ? 'Yo' : (data.user || 'Anonymous');
 
-    const $chat = $('#chat');
 
-    // 4. Creamos el elemento de forma segura para evitar ataques XSS
     const $messageDiv = $('<div>').addClass('message ' + source);
     $messageDiv.html('<strong>' + name + '</strong> <span class="date">' + datetime + '</span><br>');
 
-    // .text() se encarga de escapar cualquier código HTML peligroso automáticamente
-    const $messageText = $('<span>').text(message);
+    // .text() protege contra ataques de Inyección HTML o Scripts (XSS)
+    const $messageText = '<span>' + $('<span>').text(message).html() + '</span>';
 
     $messageDiv.append($messageText);
     $chat.append($messageDiv);
 
-    // 5. Autoscroll
+    # Autoscroll instantáneo al recibir mensaje en vivo
     $chat.scrollTop($chat[0].scrollHeight);
 };
 
@@ -54,25 +85,20 @@ chatSocket.onclose = function(e){
     console.error('El socket del chat se cerró de forma inesperada');
 };
 
+// 3. Envío de mensajes
 var $input = $('#chat-message-input');
 var $submit = $('#chat-message-submit');
 
-$submit.click(function(){
-    var message = $input.val();
+$('#chat-form').submit(function(e){
+    e.preventDefault(); // Evitamos que el formulario intente recargar la página completa
+
+    var message = $input.val().trim(); // Eliminamos espacios en blanco accidentales
     if (message){
         chatSocket.send(JSON.stringify({'message': message}));
-
         $input.val('');
-
         $input.focus();
     }
 });
 
 $input.focus();
-$input.keyup(function(e){
-    if(e.which === 13){
-        $submit.click();
-    }
-});
-
 {% endblock %}
