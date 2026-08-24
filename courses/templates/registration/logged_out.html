@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block title %}Salir{% endblock %}
+
+{% block content %}
+<h1>Salir</h1>
+<div class="module">
+    <p>Has salido de forma exitosa.
+    Puedes <a href="{% url 'login' %}">entrar de nuevo</a>
+    </p>
+</div>
+{% endblock %}

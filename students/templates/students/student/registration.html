@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Registrarse - EDUCA
+{% endblock %}
+
+{% block content %}
+<h1>Crear cuenta</h1>
+
+<div class="module">
+    <p>Introduce tus datos para crear una cuenta:</p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+        <!-- 1. Control de errores globales del formulario (ej. fallos de validación cruzada) -->
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                    <p class="error-message">{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- 2. Renderizado controlado campo por campo -->
+        {% for field in form %}
+            <div class="form-group {% if field.errors %}has-error{% endif %}">
+                <!-- Etiqueta del campo (Username, Password, etc.) -->
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+
+                <!-- El input HTML generado por Django -->
+                {{ field }}
+
+                <!-- Textos de ayuda (como los requisitos de la contraseña) -->
+                {% if field.help_text %}
+                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                {% endif %}
+
+                <!-- Errores específicos del campo justo debajo del input -->
+                {% if field.errors %}
+                    <div class="field-errors">
+                        {% for error in field.errors %}
+                            <p class="text-danger"><small>⚠ {{ error }}</small></p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+
+        <p><input type="submit" value="Crear mi cuenta" class="btn-submit"></p>
+    </form>
+</div>

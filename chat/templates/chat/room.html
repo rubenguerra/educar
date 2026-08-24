@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Sala de chat para "{{ course.title }}"{% endblock %}
+
+{% block content %}
+<div id="chat">
+</div>
+
+{{ request.user.username|json_script:"user-name-data" }}
+
+<div id="chat-input">
+    <input type="text" id="chat-message-input">
+    <input type="submit" value="Enviar" id="chat-message-submit">
+</div>
+{% endblock %}
+
+{% block domready %}
+var url = 'ws://' + window.location.host + '/ws/chat/room/' + '{{ course.id }}/';
+var chatSocket = new WebSocket(url);
+
+const currentUser = JSON.parse(document.getElementById('user-name-data').textContent);
+
+chatSocket.onmessage = function(e){
+    const data = JSON.parse(e.data);
+    const message = data.message;
+
+    // 2. Control de fallos por si 'datetime' llega vacío desde el servidor
+    const dateSource = data.datetime ? new Date(data.datetime) : new Date();
+    const dateOptions = { hour: 'numeric', minute: 'numeric', hour12: true };
+    const datetime = dateSource.toLocaleString('en', dateOptions);
+
+    // 3. Verificación de identidad
+    const isMe = data.user === currentUser;
+    const source = isMe ? 'me' : 'other';
+    const name = isMe ? 'Yo' : (data.user || 'Anonymous');
+
+    const $chat = $('#chat');
+
+    // 4. Creamos el elemento de forma segura para evitar ataques XSS
+    const $messageDiv = $('<div>').addClass('message ' + source);
+    $messageDiv.html('<strong>' + name + '</strong> <span class="date">' + datetime + '</span><br>');
+
+    // .text() se encarga de escapar cualquier código HTML peligroso automáticamente
+    const $messageText = $('<span>').text(message);
+
+    $messageDiv.append($messageText);
+    $chat.append($messageDiv);
+
+    // 5. Autoscroll
+    $chat.scrollTop($chat[0].scrollHeight);
+};
+
+chatSocket.onclose = function(e){
+    console.error('El socket del chat se cerró de forma inesperada');
+};
+
+var $input = $('#chat-message-input');
+var $submit = $('#chat-message-submit');
+
+$submit.click(function(){
+    var message = $input.val();
+    if (message){
+        chatSocket.send(JSON.stringify({'message': message}));
+
+        $input.val('');
+
+        $input.focus();
+    }
+});
+
+$input.focus();
+$input.keyup(function(e){
+    if(e.which === 13){
+        $submit.click();
+    }
+});
+
+{% endblock %}

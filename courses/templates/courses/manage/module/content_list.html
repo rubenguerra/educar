@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load course %}
+
+{% block title %}
+Módulo {{ module.order|add:1 }}: {{ module.title }}
+{% endblock %}
+
+{% block content %}
+{% with course=module.course %}
+<h1>Curso "{{ course.title }}"</h1>
+<div class="contents">
+    <h3>Módulos</h3>
+    <ul id="modules">
+        {% for m in course.modules.all %}
+        <li data-id="{{ m.id }}" {% if m == module %} class="selected" {% endif %}>
+            <a href="{% url 'module_content_list' m.id %}">
+                <span>
+                    Módulo <span class="order">{{ m.order|add:1 }}</span>
+                </span>
+                <br>
+                {{ m.title }}
+            </a>
+        </li>
+        {% empty %}
+        <li>No hay módulos aún.</li>
+        {% endfor %}
+    </ul>
+    <p><a href="{% url 'course_module_update' course.id %}">
+        Editar módulos
+    </a></p>
+</div>
+<div class="module">
+    <h2>Modulo {{ module.order|add:1 }}: {{ module.title }}</h2>
+    <h3>Contenido de modulo:</h3>
+    <div id="module-contents">
+        {% for content in module.contents.all %}
+        <div data-id="{{ content.id }}">
+            {% with item=content.item %}
+            <p>{{ item }} ({{ item|model_name }})</p>
+            <a href="{% url 'module_content_update' module.id item|model_name item.id %}">Editar</a>
+            <form action="{% url 'module_content_delete' content.id %}" method="post">
+                <input type="submit" value="Eliminar">
+                {% csrf_token %}
+            </form>
+            {% endwith %}
+        </div>
+        {% empty %}
+        <p>Este módulo no tiene contenido aún.</p>
+        {% endfor %}
+    </div>
+    <h3>Agregar nuevo contenido:</h3>
+    <ul class="content-types">
+        <li><a href="{% url 'module_content_create' module.id 'text' %}">Texto</a></li>
+        <li><a href="{% url 'module_content_create' module.id 'image' %}">Imagen</a></li>
+        <li><a href="{% url 'module_content_create' module.id 'video' %}">Video</a></li>
+        <li><a href="{% url 'module_content_create' module.id 'file' %}">Archivo</a></li>
+    </ul>
+</div>
+{% endwith %}
+{% endblock %}
+
+{% block domready %}
+$('#modules').sortable({
+    stop: function(event, ui){
+        modules_order = {};
+        $('#modules').children().each(function(){
+            // Actualiza el campo orden
+            $(this).find('.order').text($(this).index() + 1);
+            // Liga el id del módulo con su orden
+            modules_order[$(this).data('id')] = $(this).index();
+        });
+        $.ajax({
+            type: 'POST',
+            url: '{% url "module_order" %}',
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            data: JSON.stringify(modules_order)
+        });
+    }
+});
+
+$('#module-contents').sortable({
+    stop: function(event, ui){
+        contents_order = {};
+        $('#module-contents').children().each(function(){
+            // Asocia el id del módulo con su orden
+            contents_order[$(this).data('id')] = $(this).index();
+        });
+
+        $.ajax({
+            type: 'POST',
+            url: '{% url "content_order" %}',
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            data: JSON.stringify(contents_order),
+        });
+    }
+});
+{% endblock %}

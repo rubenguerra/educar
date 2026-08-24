@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Mis cursos{% endblock %}
+
+{% block content %}
+<h1>Mis cursos</h1>
+
+<div class="module">
+    <!-- Contenedor para organizar tus cursos (ideal si usas CSS Grid o Flexbox) -->
+    <div class="courses-grid">
+        {% for course in object_list %}
+            <div class="course-card">
+                <!-- Mostramos la materia como etiqueta informativa si lo deseas -->
+                <span class="badge">{{ course.subject.title }}</span>
+
+                <h3>{{ course.title }}</h3>
+
+                <!-- Añadimos el resumen truncado para no romper el diseño si es muy largo -->
+                <p class="overview">{{ course.overview|truncatewords:20 }}</p>
+
+                <!-- Aprovechamos el método 'with_modules_count' que creamos en el manager -->
+                <p class="modules-count">
+                    <small>📌 {{ course.modules_count }} módulo{{ course.modules_count|pluralize }} disponible{{ course.modules_count|pluralize }}</small>
+                </p>
+
+                <p>
+                    <a href="{% url 'student_course_detail' course.id %}" class="btn-access">
+                        Acceder a los contenidos
+                    </a>
+                </p>
+            </div>
+        {% empty %}
+            <!-- Estado vacío amigable y claro -->
+            <div class="empty-state">
+                <p>No te has inscrito a ningún curso aún.</p>
+                <p>Explora nuestro catálogo de <a href="{% url 'course_list' %}">Cursos disponibles</a> para empezar a aprender hoy mismo.</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Base de datos local de desarrollo
+*.sqlite3
+
+# Archivos subidos por usuarios (Media)
+media/
+
+# Archivos de configuración de PyCharm
+.idea/
+
+# Archivos temporales de Python
+__pycache__/
+*.pyc

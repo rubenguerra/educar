@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load cache %}
+
+{% block title %}
+    {{ object.title }}
+{% endblock %}
+
+{% block content %}
+<h1>{{ object.title }}</h1>
+
+<div class="contents">
+    <h3>Módulos</h3>
+    <ul id="modules">
+        {% for m in object.modules.all %}
+            <li data-id="{{ m.id }}" {% if m == module %} class="selected" {% endif %}>
+                <a href="{% url 'student_course_detail_module' object.id m.id %}">
+                    <span>
+                        Módulo <span class="order">{{ m.order|add:1 }}</span>
+                    </span>
+                    <br>
+                    {{ m.title }}
+                </a>
+            </li>
+        {% empty %}
+            <!-- Corrección: Mensaje amigable si el curso está vacío -->
+            <li>No hay módulos creados para este curso todavía.</li>
+        {% endfor %}
+    </ul>
+
+    <h3>
+        <a href="{% url 'chat:course_chat_room' object.id %}">
+            Sala de chat del Curso
+        </a>
+    </h3>
+</div>
+
+<div class="module">
+    <!-- CORRECCIÓN CRÍTICA: Validamos que exista un módulo antes de activar la caché y los bucles -->
+    {% if module %}
+        <h2>{{ module.title }}</h2>
+        <p>{{ module.description }}</p>
+
+        <!-- Activamos la caché de forma segura ya que 'module' no es None -->
+        {% cache 600 module_contents module.id %}
+            {% for content in module.contents.all %}
+                {% with item=content.item %}
+                    <h3>{{ item.title }}</h3>
+                    <!-- Renderizado polimórfico de texto, video, imagen, archivo -->
+                    <div class="content-item">
+                        {{ item.render }}
+                    </div>
+                {% endwith %}
+            {% empty %}
+                <p>Este módulo no contiene material de estudio por el momento.</p>
+            {% endfor %}
+        {% endcache %}
+
+    {% else %}
+        <!-- Estado vacío elegante si el curso no tiene ningún módulo aún -->
+        <div class="alert alert-info">
+            <h2>Bienvenido a {{ object.title }}</h2>
+            <p>El profesor aún no ha publicado módulos ni contenidos en este curso. ¡Vuelve pronto!</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
