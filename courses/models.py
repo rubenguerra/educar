@@ -71,7 +71,8 @@ class Content(models.Model):
                                          'text',
                                          'video',
                                          'image',
-                                         'file'
+                                         'file',
+                                         'quiz'
                                      )})
     object_id = models.PositiveIntegerField()
     item = GenericForeignKey('content_type', 'object_id')
@@ -113,3 +114,53 @@ class Image(ItemBase):
 
 class Video(ItemBase):
     url = models.URLField()
+
+
+class Quiz(ItemBase):
+    description = models.TextField(
+        blank=True,
+        help_text='Instrucciones o descripción del examen.'
+    )
+    passing_score = models.PositiveIntegerField(
+        default=60,
+        help_text='Porcentaje mínimo para aprobar (0-100).'
+    )
+
+    class Meta:
+        verbose_name = 'Quiz'
+        verbose_name_plural = 'Quizzes'
+
+
+class Question(models.Model):
+    quiz = models.ForeignKey(
+        Quiz,
+        related_name='questions',
+        on_delete=models.CASCADE
+    )
+    text = models.TextField(help_text='Texto de la pregunta.')
+    order = models.PositiveIntegerField(
+        default=0,
+        help_text='Orden de la pregunta en el examen.'
+    )
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return f'{self.quiz.title} - {self.text[:50]}'
+
+
+class Choice(models.Model):
+    question = models.ForeignKey(
+        Question,
+        related_name='choices',
+        on_delete=models.CASCADE
+    )
+    text = models.CharField(max_length=250, help_text='Texto de la opción.')
+    is_correct = models.BooleanField(
+        default=False,
+        help_text='Marca si esta opción es la respuesta correcta.'
+    )
+
+    def __str__(self):
+        return self.text

@@ -24,14 +24,18 @@
         <p id="no-messages">No hay mensajes en esta sala. ¡Sé el primero en escribir!</p>
     {% endfor %}
 </div>
-
 <!-- Formulario para enviar nuevos mensajes -->
-<form id="chat-form">
+
+  <form id="chat-form">
     <div style="display: flex; gap: 10px;">
         <input id="chat-message-input" type="text" placeholder="Escribe un mensaje aquí..." style="flex-grow: 1; padding: 10px;" autocomplete="off">
         <input id="chat-message-submit" type="submit" value="Enviar" style="padding: 10px 20px;">
     </div>
 </form>
+
+
+
+
 
 <!-- Pasamos el usuario de forma segura a JavaScript -->
 {{ request.user.username|json_script:"user-name-data" }}
@@ -77,7 +81,7 @@ chatSocket.onmessage = function(e){
     $messageDiv.append($messageText);
     $chat.append($messageDiv);
 
-    # Autoscroll instantáneo al recibir mensaje en vivo
+    // Autoscroll instantáneo al recibir mensaje en vivo
     $chat.scrollTop($chat[0].scrollHeight);
 };
 
