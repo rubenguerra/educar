@@ -16,7 +16,24 @@
             {% if course.modules.count > 0 %}
             <a href="{% url 'module_content_list' course.modules.first.id %}">Administrar contenidos</a>
             {% endif %}
+            <a href="{% url 'courses:course_ai_analytics' course.id %}" style="background-color: #f8f9fa; color: #0056b3;
+                border: 1px solid #0056b3; text-decoration: none; padding: 6px 12px; font-size: 0.85rem;
+                font-weight: bold; border-radius: 4px; display: inline-flex; align-items: center;
+                gap: 6px; transition: all 0.2s;"
+                onmouseover="this.style.backgroundColor='#0056b3'; this.style.color='white';"
+                onmouseout="this.style.backgroundColor='#f8f9fa'; this.style.color='#0056b3';">
+                <span>📊</span> Diagnóstico de IA
+            </a>
+
         </p>
+
+        <!--<div class="course-actions" style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px;">-->
+
+    <!-- ... Para revisar Tus otros botones como 'Editar', 'Módulos', etc. ... -->
+
+    <!-- NUEVO BOTÓN DE ENLACE DIRECTO A ANALÍTICAS DE IA -->
+
+
     </div>
     {% empty %}
     <p>Aún no tienes ningún curso.</p>
