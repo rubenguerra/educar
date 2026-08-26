@@ -1,6 +1,7 @@
 from django.db import models
 from django.template.loader import render_to_string
 from django.contrib.auth.models import User
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from .fields import OrderField
@@ -164,3 +165,25 @@ class Choice(models.Model):
 
     def __str__(self):
         return self.text
+
+
+class CourseAnalytics(models.Model):
+    course = models.ForeignKey(Course,
+                               on_delete=models.CASCADE,
+                               related_name='ai_analytics')
+    generated_by = models.ForeignKey(settings.AUTH_USER_MODEL,
+                                     on_delete=models.CASCADE,
+                                     null=True)
+    report_content = models.TextField(
+        help_text='Contenido del informe analítico estructurado en Markdown generado por la IA'
+    )
+    total_messages_analyzed = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Analítica de Curso'
+        verbose_name_plural = 'Analíticas de Cursos'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Reporte IA - {self.course.title} ({self.created_at.strftime('%d/%m/%Y')})"

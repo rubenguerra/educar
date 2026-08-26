@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Analíticas de IA: {{ course.title }}{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 900px; margin-top: 30px; margin-bottom: 50px; font-family: sans-serif;">
+    
+    <!-- ENCABEZADO DE CONTROL -->
+    <div style="background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); padding: 25px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+        <div>
+            <h1 style="color: #212529; font-size: 1.6rem; margin: 0 0 5px 0;">🎯 Diagnóstico de Aprendizaje por IA</h1>
+            <p style="color: #6c757d; margin: 0; font-size: 0.95rem;">
+                Curso: <strong>{{ course.title }}</strong>
+            </p>
+        </div>
+        
+        <!-- Formulario para refrescar y generar un nuevo reporte analítico masivo -->
+        <form action="{% url 'courses:course_ai_analytics' course.id %}" method="post" style="margin: 0;">
+            {% csrf_token %}
+            <button type="submit" style="background-color: #28a745; color: white; border: none; padding: 12px 20px; font-weight: bold; border-radius: 6px; cursor: pointer; box-shadow: 0 4px 6px rgba(40,167,69,0.15);">
+                🔄 Sincronizar y Actualizar Reporte
+            </button>
+        </form>
+    </div>
+
+    <!-- MOSTRAR EL INFORME GENERADO -->
+    {% if report %}
+        <div style="background: #fff; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); padding: 35px; border-top: 5px solid #0056b3;">
+            <div style="display: flex; justify-content: space-between; color: #6c757d; font-size: 0.85rem; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 25px;">
+                <span>Generado por el Asistente de Cátedra IA</span>
+                <span>Última actualización: <strong>{{ report.created_at|date:"d/m/Y H:i" }}</strong> (En base a {{ report.total_messages_analyzed }} dudas analizadas)</span>
+            </div>
+
+            <!-- Caja de contenido del reporte -->
+            <!-- Nota: Usamos linebreaks para respetar los saltos de línea del Markdown si no usas un filtro markdown explícito -->
+            <div class="markdown-body" style="line-height: 1.6; color: #333; font-size: 1.05rem; white-space: pre-wrap;">{{ report.report_content }}</div>
+        </div>
+    {% else %}
+        <div style="background: white; border-radius: 8px; border: 2px dashed #ced4da; padding: 50px; text-align: center; color: #6c757d;">
+            <span style="font-size: 3rem; display: block; margin-bottom: 15px;">📊</span>
+            <h3>Aún no se ha generado ningún diagnóstico de aprendizaje</h3>
+            <p style="max-width: 500px; margin: 10px auto 20px auto; font-size: 0.95rem;">
+                El sistema analizará de forma anónima y conjunta las dudas teóricas de todos tus alumnos en el chat para decirte cuáles son los vacíos más comunes del grupo.
+            </p>
+            <form action="{% url 'courses:course_ai_analytics' course.id %}" method="post" style="margin: 0;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary" style="background-color: #0056b3; color: white; padding: 10px 25px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
+                    Generar Primer Reporte Analítico
+                </button>
+            </form>
+        </div>
+    {% endif %}
+
+    <div style="margin-top: 25px; text-align: left;">
+        <a href="{% url 'courses:manage_course_list' %}" style="color: #0056b3; font-weight: bold; text-decoration: none;">
+            ← Volver a mis Cursos
+        </a>
+    </div>
+</div>
+{% endblock %}

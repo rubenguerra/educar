@@ -1,17 +1,21 @@
-from django.shortcuts import redirect, get_object_or_404
+from django.shortcuts import redirect, get_object_or_404, render
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib.auth.decorators import login_required
 from django.views.generic.base import TemplateResponseMixin, View
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.views.generic.list import ListView
 from django.views.generic.detail import DetailView
 from django.forms.models import modelform_factory
 from django.urls import reverse_lazy
+from django.contrib import messages
 from django.db.models import Count
 from django.apps import apps
 from django.core.cache import cache
+from openai import OpenAI
 from braces.views import CsrfExemptMixin, JsonRequestResponseMixin
-from .models import Course, Module, Content, Subject
+from .models import Course, Module, Content, Subject, CourseAnalytics
 from .forms import ModuleFormSet
+from students.models import ChatMessage
 from students.forms import CourseEnrollForm
 
 
@@ -196,3 +200,58 @@ class CourseDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         context['enroll_form'] = CourseEnrollForm(initial={'course': self.object})
         return context
+
+@login_required
+def generate_course_ai_analytics(request, course_id):
+    course = get_object_or_404(Course, id=course_id, owner=request.user)
+
+    latest_report = course.ai_analytics.first()
+
+    if request.method == 'POST':
+        chat_logs = ChatMessage.objects.filter(course=course,
+                                               sender_role='user').order_by('-timestamp')[:200]
+        total_logs = chat_logs.count()
+
+        if total_logs < 5:
+            messages.warning(request, "Se requieren al menos 5 consultas de los alumnos en el chat para poder generar un análisis de patrones válido.")
+            return redirect('courses:course_ai_analytics', course.id)
+        compiled_questions = ""
+        for log in reversed(chat_logs):
+            compiled_questions += f'- Estudiante: {log.message}\n'
+
+        try:
+            client =OpenAI()
+
+            prompt_analisis = (
+                f"Actúas como un Consultor Analítico de Datos de Aprendizaje (Learning Analytics) experto.\n"
+                f"Se te provee una lista de las consultas reales que los estudiantes le han hecho al tutor de IA dentro del curso '{course.title}'.\n\n"
+                f"TU TAREA:\n"
+                f"Analiza de forma rigurosa los textos, identifica patrones y redacta un informe ejecutivo estructurado en español dirigido al profesor del curso. "
+                f"El informe DEBE estar formateado en Markdown limpio y contener exactamente estas secciones:\n"
+                f"1. ### 📈 Resumen Ejecutivo: Breve diagnóstico del estado de dudas general.\n"
+                f"2. ### 🔍 Las 3 Dudas o Vacíos Teóricos Más Comunes: Agrupa los mensajes en tres grandes temas recurrentes y explica por qué están confundidos.\n"
+                f"3. ### 💡 Recomendaciones Pedagógicas Clave: Acciones concretas que el profesor puede tomar en su próxima clase o material para mitigar estas dudas.\n"
+                f"4. ### ❓ Frases o Preguntas Clave: Cita textualmente 2 o 3 dudas de los alumnos que reflejen perfectamente la confusión colectiva.\n\n"
+                f"LISTA DE CONSULTAS DE LOS ALUMNOS:\n{compiled_questions}"
+            )
+            response = client.chat.completions.create(
+                model='gpt-4o-mini',
+                messages=[{'role': 'user', 'content': prompt_analisis}],
+                temperature=0.3,
+                max_tokens=1000
+            )
+
+            ai_report = response.choices.message.content.strip()
+
+            latest_report = CourseAnalytics.objects.create(course=course,
+                                                           generated_by=request.user,
+                                                           report_content=ai_report,
+                                                           total_messages_analized=total_logs)
+            messages.success(request, "¡Informe analítico de IA actualizado con éxito en base a los chats recientes!")
+        except Exception as e:
+            messages.error(request, f"Error de comunicación con la IA al compilar el reporte: {str(e)}")
+
+        return redirect('courses:course_ai_analytics', course.id)
+    return render(request, 'courses/manage/analytics/report.html',
+                  {'course':course,
+                   'report': latest_report})
