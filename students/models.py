@@ -76,3 +76,39 @@ class QuizAttemptAnswer(models.Model):
 
     def __str__(self):
         return f'{self.attempt.student.username} - {self.question}: {self.selected_choice}'
+
+
+class ChatMessage(models.Model):
+    ROLE_CHOICES = [
+        ('user', 'Estudiante/Profesor'),
+        ('ai', 'Asistente IA'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='ai_chat_messages'
+    )
+    # Vinculamos el chat a un curso para que la IA sepa el tema de estudio actual
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name='course_chats',
+        null=True,
+        blank=True
+    )
+    sender_role = models.CharField(
+        max_length=10,
+        choices=ROLE_CHOICES,
+        default='user'
+    )
+    message = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Mensaje de Chat"
+        verbose_name_plural = "Mensajes de Chat"
+        ordering = ['timestamp']
+
+    def __str__(self):
+        return f"{self.user.username} ({self.sender_role}): {self.message[:30]}"

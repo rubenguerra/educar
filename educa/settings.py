@@ -9,28 +9,36 @@ https://docs.djangoproject.com/en/6.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
-import os.path
+import os
+import environ
 from pathlib import Path
 from django.urls import reverse_lazy
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+env = environ.Env(
+    DEBUG=(bool, False)
+)
+
+environ.Env.read_env(BASE_DIR / '.env')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure--5g#lz2b=)s_&=bgvth3y7!53po4lhazs3+c-13&l_9$j)7-6s'
+SECRET_KEY = env('SECRET_KEY')
+DEBUG = env('DEBUG', default=True)
+
+os.environ['OPENAI_API_KEY'] = env('OPENAI_API_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
 ALLOWED_HOSTS = []
 
 LOGIN_REDIRECT_URL = reverse_lazy('student_course_list')
 
-ASGI_APPLICATION = 'educa.routing.application'
+ASGI_APPLICATION = 'educa.asgi.application'
 
 """
 CHANNEL_LAYERS = {
@@ -69,9 +77,6 @@ INSTALLED_APPS = [
     'embed_video',
     'memcache_status',
     'rest_framework',
-
-
-
 ]
 
 
@@ -187,3 +192,4 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+

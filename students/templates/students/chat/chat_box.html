@@ -1,0 +1,149 @@
+<!-- Botón flotante para abrir el chat -->
+<div id="ai-chat-launcher" style="position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background-color: #0056b3; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); cursor: pointer; z-index: 1000; transition: transform 0.2s;">
+    <span style="font-size: 1.8rem; color: white;">💬</span>
+</div>
+
+<!-- Ventana flotante del chat (Oculta por defecto) -->
+<div id="ai-chat-window" style="display: none; position: fixed; bottom: 90px; right: 20px; width: 350px; height: 450px; background: white; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.15); flex-direction: column; overflow: hidden; z-index: 1000; font-family: sans-serif;">
+
+    <!-- Encabezado del Chat -->
+    <div style="background-color: #0056b3; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.2rem;">🤖</span>
+            <div>
+                <strong style="display: block; font-size: 0.95rem;">Tutor IA EDUCA</strong>
+                <small style="font-size: 0.75rem; opacity: 0.85;">En línea ahora</small>
+            </div>
+        </div>
+        <button id="ai-chat-close" style="background: none; border: none; color: white; font-size: 1.2rem; cursor: pointer;">✕</button>
+    </div>
+
+    <!-- Contenedor de Mensajes -->
+    <div id="ai-chat-messages" style="flex: 1; padding: 15px; overflow-y: auto; background-color: #f8f9fa; display: flex; flex-direction: column; gap: 10px;">
+        <!-- Mensaje de bienvenida inicial -->
+        <div style="align-self: flex-start; background-color: #e9ecef; color: #212529; padding: 10px 14px; border-radius: 12px 12px 12px 2px; max-width: 80%; font-size: 0.9rem;">
+            ¡Hola! Soy tu tutor de Inteligencia Artificial. ¿En qué puedo ayudarte hoy con respecto a este curso?
+        </div>
+    </div>
+
+    <!-- Formulario de Entrada de Texto -->
+    <form id="ai-chat-form" style="display: flex; padding: 10px; border-top: 1px solid #dee2e6; background: white; margin: 0;">
+        <input type="text" id="ai-chat-input" placeholder="Escribe tu consulta aquí..." autocomplete="off" style="flex: 1; padding: 10px; border: 1px solid #ced4da; border-radius: 20px; outline: none; font-size: 0.9rem; padding-right: 15px;">
+        <button type="submit" style="background-color: #0056b3; color: white; border: none; padding: 8px 15px; border-radius: 50%; margin-left: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+            ➔
+        </button>
+    </form>
+</div>
+
+<!-- LÓGICA DE CONEXIÓN EN TIEMPO REAL (WEBSOCKETS) -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const launcher = document.getElementById("ai-chat-launcher");
+        const windowChat = document.getElementById("ai-chat-window");
+        const closeBtn = document.getElementById("ai-chat-close");
+        const chatForm = document.getElementById("ai-chat-form");
+        const chatInput = document.getElementById("ai-chat-input");
+        const chatMessages = document.getElementById("ai-chat-messages");
+
+        // 1. Alternar visibilidad de la ventana del chat
+        launcher.addEventListener("click", () => {
+            windowChat.style.display = windowChat.style.display === "none" ? "flex" : "none";
+            scrollToBottom();
+        });
+        closeBtn.addEventListener("click", () => windowChat.style.display = "none");
+
+        // 2. Inicializar la conexión del WebSocket con Django Channels
+        // Extraemos de forma segura el ID del curso inyectado desde el contexto del backend
+        const courseId = "{{ course.id }}";
+
+        // Determinamos el protocolo seguro (ws:// o wss:// para producción)
+        const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+        const wsUrl = wsProtocol + window.location.host + "/ws/chat/" + courseId + "/";
+
+        const chatSocket = new WebSocket(wsUrl);
+
+        // 3. Escuchar los mensajes provenientes del servidor (Consumer)
+        chatSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+
+            // Si el estado es 'received', significa que es la confirmación del mensaje del propio usuario
+            if (data.status === 'received' && data.role === 'user') {
+                appendMessage(data.message, 'user');
+            }
+            // Si es 'success' y viene de la 'ai', pintamos la respuesta generada por OpenAI
+            else if (data.status === 'success' && data.role === 'ai') {
+                removeTypingIndicator();
+                appendMessage(data.message, 'ai');
+            }
+        };
+
+        chatSocket.onclose = function(e) {
+            console.error("El WebSocket del tutor de IA se cerró inesperadamente.");
+        };
+
+        // 4. Enviar el mensaje al presionar Enter o hacer clic en enviar
+        chatForm.addEventListener("submit", function(e) {
+            e.preventDefault();
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            // Enviamos el paquete de datos en formato JSON a través del WebSocket abierto
+            chatSocket.send(json.stringify({
+                'message': message
+            }));
+
+            chatInput.value = "";
+            showTypingIndicator();
+        });
+
+        // FUNCIONES UTILITARIAS DE RENDERIZADO
+        function appendMessage(text, role) {
+            const msgDiv = document.createElement("div");
+            msgDiv.style.maxWidth = "80%";
+            msgDiv.style.padding = "10px 14px";
+            msgDiv.style.fontSize = "0.9rem";
+            msgDiv.style.lineHeight = "1.4";
+
+            if (role === 'user') {
+                msgDiv.style.alignSelf = "flex-end";
+                msgDiv.style.backgroundColor = "#0056b3";
+                msgDiv.style.color = "white";
+                msgDiv.style.borderRadius = "12px 12px 2px 12px";
+            } else {
+                msgDiv.style.alignSelf = "flex-start";
+                msgDiv.style.backgroundColor = "#e9ecef";
+                msgDiv.style.color = "#212529";
+                msgDiv.style.borderRadius = "12px 12px 12px 2px";
+            }
+
+            msgDiv.innerText = text;
+            chatMessages.appendChild(msgDiv);
+            scrollToBottom();
+        }
+
+        function showTypingIndicator() {
+            removeTypingIndicator(); // Evitar duplicaciones
+            const indicator = document.createElement("div");
+            indicator.id = "ai-typing-indicator";
+            indicator.style.alignSelf = "flex-start";
+            indicator.style.backgroundColor = "#e9ecef";
+            indicator.style.color = "#6c757d";
+            indicator.style.padding = "8px 12px";
+            indicator.style.borderRadius = "12px 12px 12px 2px";
+            indicator.style.fontSize = "0.85rem";
+            indicator.style.fontStyle = "italic";
+            indicator.innerText = "🤖 Tutor IA está escribiendo...";
+            chatMessages.appendChild(indicator);
+            scrollToBottom();
+        }
+
+        function removeTypingIndicator() {
+            const indicator = document.getElementById("ai-typing-indicator");
+            if (indicator) indicator.remove();
+        }
+
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    });
+</script>
