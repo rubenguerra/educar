@@ -67,14 +67,20 @@
             const data = JSON.parse(e.data);
 
             // Si el estado es 'received', significa que es la confirmación del mensaje del propio usuario
-            if (data.status === 'received' && data.role === 'user') {
-                appendMessage(data.message, 'user');
+            if (data.status === 'history') {
+                data.messages.forEach(msg => {
+                    appendMessage(msg.message, msg.sender_role);
+                });
             }
             // Si es 'success' y viene de la 'ai', pintamos la respuesta generada por OpenAI
-            else if (data.status === 'success' && data.role === 'ai') {
+            else if (data.status === 'receive' && data.role === 'user') {
+                appendMessage(data.message, 'user');
+            }
+            else if (data.status === 'success' && data.role === 'ai'){
                 removeTypingIndicator();
                 appendMessage(data.message, 'ai');
             }
+
         };
 
         chatSocket.onclose = function(e) {

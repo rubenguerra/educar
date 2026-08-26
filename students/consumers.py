@@ -3,7 +3,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from openai import AsyncOpenAI  # Importación del cliente no-bloqueante
 from .models import ChatMessage
-from courses.models import Course
+from courses.models import Course, Content
 
 
 class AIChatConsumer(AsyncWebsocketConsumer):
@@ -26,6 +26,12 @@ class AIChatConsumer(AsyncWebsocketConsumer):
         )
         await self.accept()
 
+        # Se recuperan los últimos 10 mensajes de la base de datos
+        history = await self.get_conversation_history(user=self.user, course_id=self.course_id, limit=10)
+        if history:
+            await self.send(text_data=json.dumps({'status': 'history',
+                                                  'messages': history}))
+
     async def disconnect(self, close_code):
         if hasattr(self, 'room_group_name'):
             await self.channel_layer.group_discard(
@@ -45,14 +51,15 @@ class AIChatConsumer(AsyncWebsocketConsumer):
         await self.save_message(user=self.user, course_id=self.course_id, role='user', text=user_message)
 
         # 2. Informar al frontend confirmación de recepción
-        await self.send(text_data=json.dumps({
-            'status': 'received',
-            'message': user_message,
-            'role': 'user'
-        }))
+        await self.send(json.dumps({'status': 'received',
+                                    'message': user_message,
+                                    'role': 'user'}))
 
         # 3. EXTRAER EL CONTEXTO EN TIEMPO REAL (Línea nueva y clave)
         student_context = await self.get_student_academic_context(user=self.user, course_id=self.course_id)
+
+         # EXTRAER MATERIAL DE ESTUDIO
+        course_material = await self.get_course_material_contex(course_id=self.course_id)
 
         # 4. Recuperar el historial de chat (Memoria conversacional)
         conversation_history = await self.get_conversation_history(user=self.user, course_id=self.course_id)
@@ -61,17 +68,19 @@ class AIChatConsumer(AsyncWebsocketConsumer):
             # 5. Configurar el System Prompt inyectando las variables académicas
             system_prompt = (
                 f"Eres un tutor de Inteligencia Artificial experto y ultra personalizado para la plataforma 'EDUCA'.\n"
-                f"Estás asistiendo al usuario '{self.user.username}' en su proceso de aprendizaje.\n\n"
-                f"A continuación se te provee su información académica actualizada en tiempo real. Utilízala para "
-                f"personalizar tus respuestas de forma empática. Si ves que ha reprobado un examen recientemente, "
-                f"ofrécele ayuda específica sobre los temas de ese módulo de manera proactiva. Si va muy bien, felicítalo.\n\n"
+                f"Estás asistiendo de forma privada al estudiante '{self.user.username}'.\n\n"
+                f"Tu principal fuente de verdad es el siguiente material de estudio oficial del curso. "
+                f"Si el alumno te hace preguntas teóricas, debes responder basándote estrictamente en este contenido, "
+                f"explicándolo de forma pedagógica, clara y profunda:\n\n"
+                f"{course_material}\n\n"
+                f"Información de progreso actual del usuario para personalizar tu tono:\n"
                 f"{student_context}\n\n"
-                f"REGLAS DE COMPORTAMIENTO:\n"
-                f"1. Responde de forma clara, amigable, pedagógica y motivadora.\n"
-                f"2. NUNCA le des las respuestas directas de preguntas de exámenes o Quizzes. Si el estudiante te consulta "
-                f"sobre una pregunta que falló, explícale el concepto teórico de fondo y guíalo con preguntas socráticas "
-                f"para que él mismo deduzca la solución correcta.\n"
-                f"3. Si te saluda o pregunta algo general, haz una breve referencia cordial a su estado en el curso."
+                f"REGLAS OBLIGATORIAS DE COMPORTAMIENTO:\n"
+                f"1. Si el tema consultado NO está en el material de estudio, puedes usar tu conocimiento general "
+                f"para complementar, pero prioriza siempre la terminología y estructura del curso oficial.\n"
+                f"2. Nunca inventes lecturas o contenidos que no estén listados en el bloque de arriba.\n"
+                f"3. Mantén la regla socrática: guía al alumno con pistas e hilos lógicos en lugar de darle respuestas "
+                f"directas de sus evaluaciones."
             )
 
             # Estructurar la carga de mensajes para OpenAI
@@ -88,8 +97,8 @@ class AIChatConsumer(AsyncWebsocketConsumer):
             response = await self.ai_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages_payload,
-                max_tokens=600,
-                temperature=0.7
+                max_tokens=700,
+                temperature=0.5
             )
 
             ai_response = response.choices.message.content.strip()
@@ -99,13 +108,10 @@ class AIChatConsumer(AsyncWebsocketConsumer):
 
         # 7. Guardar la respuesta generada por la IA
         await self.save_message(user=self.user, course_id=self.course_id, role='ai', text=ai_response)
-
         # 8. Despachar la respuesta de la IA al WebSocket
-        await self.send(text_data=json.dumps({
-            'status': 'success',
-            'message': ai_response,
-            'role': 'ai'
-        }))
+        await self.send(json.dumps({'status': 'success',
+                                    'message': ai_response,
+                                    'role': 'ai'}))
 
     @database_sync_to_async
     def get_conversation_history(self, user, course_id, limit=10):
@@ -182,3 +188,33 @@ class AIChatConsumer(AsyncWebsocketConsumer):
 
         context_text += "----------------------------------------"
         return context_text
+
+    @database_sync_to_async
+    def get_course_material_contex(self, course_id):
+        """
+        Toma el temario y el contenido textual de los módulos del curso para
+        que la IA actúe como un experto del material oficial.
+        """
+        course = Course.objects.filter(id=course_id).prefetch_related('modules__contents').first()
+        if not course:
+            return 'Material de estudio no disponible.'
+
+        material_text = "--- MATERIAL DE ESTUDIO OFICIAL DEL CURSO ---\n"
+
+        for module in course.modules.all():
+            material_text += f'\nMódulo: {module.title}\n'
+            material_text += f'Descripción del Módulo: {module.description}\n'
+
+            for content in module.contents.all():
+                content_model = content.content_type.model
+                item = content.item
+
+                if content_model == 'text':
+                    material_text += f' - Lectura [{item.title}]: {item.content}\n'
+                elif content_model == 'video':
+                    material_text += f" - Video Disponible: '{item.title}' (URL o recurso multimedia asociado).\n"
+                elif content_model == 'quiz':
+                    material_text += f" - Evaluación del Módulo: '{item.title}' Contiene preguntas de autoevaluación teórica.\n"
+
+            material_text += "-----------------------------------------------------"
+            return material_text
