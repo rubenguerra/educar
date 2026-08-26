@@ -1,0 +1,106 @@
+<div class="quiz-container" style="border: 2px solid #0056b3; border-radius: 8px; padding: 20px; background-color: #f8f9fa; margin-top: 15px;">
+    <h2 style="color: #0056b3; margin-top: 0;">📝 Examen: {{ item.title }}</h2>
+    <p class="text-muted"><em>Responde con atención todas las preguntas antes de enviar la evaluación.</em></p>
+    <hr>
+
+    <!-- Formulario seguro para procesar las respuestas del alumno -->
+    <form action="{% url 'students:student_submit_quiz' item.id %}" method="post" id="quiz-evaluation-form">
+        {% csrf_token %}
+
+        <!-- Iteramos sobre las preguntas asociadas a este Quiz específico -->
+        {% for question in item.questions.all %}
+            <div class="quiz-question" style="margin-bottom: 25px;">
+                <p style="font-size: 1.1rem; font-weight: bold; margin-bottom: 10px;">
+                    {{ forloop.counter }}. {{ question.text }}
+                </p>
+
+                <!-- Iteramos sobre las opciones de respuesta de la pregunta -->
+                <div class="quiz-choices" style="padding-left: 15px;">
+                    {% for choice in question.choices.all %}
+                        <div class="form-check" style="margin-bottom: 8px;">
+                            <input class="form-check-input"
+                                   type="radio"
+                                   name="question_{{ question.id }}"
+                                   id="choice_{{ choice.id }}"
+                                   value="{{ choice.id }}"
+                                   required>
+                            <label class="form-check-label" for="choice_{{ choice.id }}" style="margin-left: 5px; cursor: pointer;">
+                                {{ choice.text }}
+                            </label>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% if not forloop.last %}<hr style="border-top: 1px dashed #ccc;">{% endif %}
+        {% empty %}
+            <p class="alert alert-warning">Este examen aún no contiene preguntas cargadas por el profesor.</p>
+        {% endfor %}
+
+        {% if item.questions.exists %}
+            <div style="margin-top: 20px; text-align: right;">
+                <input type="submit" value="Enviar mis Respuestas" class="btn btn-primary" style="background-color: #0056b3; color: white; border: none; padding: 10px 25px; font-weight: bold; border-radius: 4px; cursor: pointer;">
+            </div>
+        {% endif %}
+    </form>
+
+    <!-- ... Aquí termina el formulario del examen  ... -->
+
+<!-- SECCIÓN DE HISTORIAL DE INTENTOS -->
+<div class="quiz-history-container" style="margin-top: 30px; border-top: 2px solid #dee2e6; padding-top: 20px;">
+    <h3 style="color: #495057; font-size: 1.25rem; margin-bottom: 15px;">📊 Tu Historial de Intentos para este Examen</h3>
+
+    <!-- Filtramos los intentos pasados por el contexto que correspondan a este Quiz específico -->
+    {% version_matched_attempts as local_attempts %}
+
+    <div class="table-responsive" style="background: white; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <table class="table" style="width: 100%; margin-bottom: 0; border-collapse: collapse; text-align: left;">
+            <thead>
+                <tr style="background-color: #e9ecef; color: #495057; border-bottom: 2px solid #dee2e6;">
+                    <th style="padding: 12px;">Fecha y Hora</th>
+                    <th style="padding: 12px; text-align: center;">Resultado</th>
+                    <th style="padding: 12px; text-align: center;">
+                        Calificación
+                    </th>
+                    <th style="padding: 12px; text-align: center;">Aciertos</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if quiz_attempts %}
+                    {% for attempt in quiz_attempts %}
+                        {% if attempt.quiz_id == item.id %}
+                            <tr style="border-bottom: 1px solid #dee2e6; transition: background-color 0.2s;">
+                                <td style="padding: 12px; color: #6c757d;">
+                                    {{ attempt.taken_at|date:"d/m/Y H:i" }}
+                                    <small style="display: block; font-size: 0.75rem;">{{ attempt.taken_at|timesince }} atrás</small>
+                                </td>
+                                <td style="padding: 12px; text-align: center;">
+                                    {% if attempt.passed %}
+                                        <span style="background-color: #d4edda; color: #155724; padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: bold;">Aprobado</span>
+                                    {% else: %}
+                                        <span style="background-color: #f8d7da; color: #721c24; padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: bold;">Reprobado</span>
+                                    {% endif %}
+                                </td>
+                                <td style="padding: 12px; text-align: center; font-weight: bold; color: {% if attempt.passed %}#155724{% else %}#721c24{% endif %};">
+                                    <a href="{% url 'students:quiz_attempt_detail' attempt.id %}" style="color: #0056b3; font-weight: bold; text-decoration: underline;">
+                                        {{ attempt.score }} / 10.0
+                                    </a>
+                                </td>
+                                <td style="padding: 12px; text-align: center; color: #495057;">
+                                    {{ attempt.correct_answers }} de {{ attempt.total_questions }}
+                                </td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="4" style="padding: 20px; text-align: center; color: #6c757d; font-style: italic;">
+                            Aún no has realizado ningún intento para este examen.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</div>

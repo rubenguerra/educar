@@ -1,0 +1,27 @@
+<!-- En tu barra lateral de contenidos del curso (ej. detail.html) -->
+<ul class="content-list" style="list-style: none; padding-left: 0;">
+    {% for content in module.contents.all %}
+        <!-- Verificación lógica en la iteración -->
+        <li style="padding: 10px; margin-bottom: 5px; border-radius: 4px; background: #fff;">
+
+            <!-- Aquí decidirás si muestras el enlace activo o un diseño de candado bloqueado -->
+            <!-- Nota: Puedes pasar una lista de 'ids_bloqueados' desde el contexto de la vista para evaluar aquí de forma simple -->
+            {% if content.id in blocked_content_ids %}
+                <div style="color: #6c757d; cursor: not-allowed; display: flex; align-items: center; gap: 8px;">
+                    <span>🔒</span>
+                    <span style="text-decoration: line-through;">{{ content.item.title }}</span>
+                    <small style="background: #eee; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">Bloqueado</small>
+                </div>
+            {% else %}
+                <a href="?content={{ content.id }}" style="color: #0056b3; text-decoration: none; display: flex; align-items: center; gap: 8px;">
+                    <span>📖</span>
+                    {{ content.item.title }}
+                    {% if content in completed_contents %}
+                        <span style="color: #28a745; font-size: 0.85rem;">✓</span>
+                    {% endif %}
+                </a>
+            {% endif %}
+
+        </li>
+    {% endfor %}
+</ul>

@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Resultados: {{ attempt.quiz.title }}{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px; margin-top: 30px; margin-bottom: 50px; font-family: sans-serif;">
+    
+    <!-- NUEVA TARJETA CON GRÁFICO VISUAL -->
+    <div style="background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 30px; margin-bottom: 30px;">
+        <div style="text-align: center; margin-bottom: 25px;">
+            <h1 style="color: #212529; font-size: 1.8rem; margin: 0 0 5px 0;">Resultados de Evaluación</h1>
+            <h3 style="color: #0056b3; font-size: 1.3rem; margin: 0; font-weight: 500;">{{ attempt.quiz.title }}</h3>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-around; align-items: center; gap: 30px; margin-bottom: 25px;">
+
+            <!-- Componente 1: Gráfico Circular Nativo con CSS -->
+            <!-- Calculamos el porcentaje en base a 360 grados para el degradado cónico -->
+            {% with percentage=attempt.score|stringformat:".0f" %}
+            <div style="position: relative; width: 150px; height: 150px; border-radius: 50%;
+                        background: conic-gradient({% if attempt.passed %}#28a745{% else %}#dc3545{% endif %} {{ attempt.score }}0%, #e9ecef 0%);
+                        display: flex; align-items: center; justify-content: center;">
+
+                <!-- Centro blanco del gráfico para simular una dona -->
+                <div style="position: absolute; width: 110px; height: 110px; background: white; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    <span style="font-size: 1.8rem; font-weight: bold; color: #212529;">{{ attempt.score }}</span>
+                    <span style="font-size: 0.85rem; color: #6c757d; font-weight: bold;">Nota Máx: 10</span>
+                </div>
+            </div>
+            {% endwith %}
+
+            <!-- Componente 2: Barras Estatísticas Progresivas -->
+            <div style="flex: 1; min-width: 250px;">
+                <!-- Barra de Aciertos -->
+                <div style="margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9rem; color: #495057;">
+                        <span><strong>Preguntas Acertadas</strong></span>
+                        <span>{{ attempt.correct_answers }} / {{ attempt.total_questions }}</span>
+                    </div>
+                    <div style="background-color: #e9ecef; border-radius: 10px; height: 12px; width: 100%; overflow: hidden;">
+                        <div style="background-color: #28a745; height: 100%; width: {% widthratio attempt.correct_answers attempt.total_questions 100 %}%; border-radius: 10px;"></div>
+                    </div>
+                </div>
+
+                <!-- Barra de Errores o No Respondidas -->
+                <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9rem; color: #495057;">
+                        <span><strong>Errores / En blanco</strong></span>
+                        <!-- Usamos filtros matemáticos en los datos devueltos para calcular los fallos -->
+                        <span>{% widthratio attempt.total_questions 1 1 as total %}{{ attempt.total_questions|yesno:",," }}{{ attempt.total_questions|add:"-correct_answers" }} / {{ attempt.total_questions }}</span>
+                    </div>
+                    <div style="background-color: #e9ecef; border-radius: 10px; height: 12px; width: 100%; overflow: hidden;">
+                        <!-- El ancho restante se calcula con la diferencia porcentual -->
+                        <div style="background-color: #dc3545; height: 100%; width: {% widthratio attempt.total_questions|add:"-correct_answers" attempt.total_questions 100 %}%; border-radius: 10px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estado de aprobación de la prueba -->
+        <div style="text-align: center; border-top: 1px solid #dee2e6; padding-top: 20px;">
+            {% if attempt.passed %}
+                <div style="background-color: #d4edda; color: #155724; padding: 12px 25px; border-radius: 30px; font-weight: bold; display: inline-block; box-shadow: 0 2px 5px rgba(40,167,69,0.15);">
+                    🎉 ¡Felicidades! Examen Aprobado con éxito.
+                </div>
+            {% else %}
+                <div style="background-color: #f8d7da; color: #721c24; padding: 12px 25px; border-radius: 30px; font-weight: bold; display: inline-block; box-shadow: 0 2px 5px rgba(220,53,69,0.15);">
+                    ⚠️ No se alcanzó la nota mínima. Te sugerimos repasar el material.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- REVISIÓN PREGUNTA POR PREGUNTA (Se mantiene igual que el código de ayer) -->
+    <h2 style="color: #495057; font-size: 1.4rem; margin-bottom: 20px; font-weight: 600;">🔍 Revisión de Respuestas</h2>
+
+    {% for ans in answers %}
+        <div style="background: white; border-radius: 8px; border-left: 6px solid {% if ans.selected_choice and ans.selected_choice.is_correct %}#28a745{% else %}#dc3545{% endif %}; box-shadow: 0 2px 8px rgba(0,0,0,0.04); padding: 20px; margin-bottom: 20px;">
+
+            <p style="font-size: 1.1rem; font-weight: bold; margin-top: 0; margin-bottom: 15px; color: #212529;">
+                {{ forloop.counter }}. {{ ans.question.text }}
+            </p>
+
+            <div style="padding-left: 5px;">
+                {% for choice in ans.question.choices.all %}
+                    <div style="padding: 12px; margin-bottom: 8px; border-radius: 6px; font-size: 0.95rem;
+                        {% if choice.is_correct %}
+                            background-color: #e2f0d9; border: 1px solid #b5dba3; color: #2d571b; font-weight: 500;
+                        {% elif ans.selected_choice_id == choice.id and not choice.is_correct %}
+                            background-color: #fce4e4; border: 1px solid #f7b3b3; color: #721c24;
+                        {% else %}
+                            background-color: #f8f9fa; border: 1px solid #e9ecef; color: #495057;
+                        {% endif %}">
+
+                        <span style="font-weight: bold; margin-right: 8px;">
+                            {% if choice.is_correct %}
+                                ✓ Correcta:
+                            {% elif ans.selected_choice_id == choice.id %}
+                                ✗ Tu respuesta:
+                            {% else %}
+                                ○ Opción:
+                            {% endif %}
+                        </span>
+                        {{ choice.text }}
+                    </div>
+                {% endfor %}
+            </div>
+
+            {% if not ans.selected_choice %}
+                <p style="margin: 12px 0 0 5px; color: #dc3545; font-size: 0.9rem; font-style: italic; font-weight: 500;">
+                    * No respondiste a esta pregunta.
+                </p>
+            {% endif %}
+        </div>
+    {% endfor %}
+
+    <!-- BOTONES DE NAVEGACIÓN -->
+    <div style="margin-top: 35px; text-align: center;">
+        <a href="{% url 'students:student_course_detail' course.id %}" style="background-color: #0056b3; color: white; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: bold; inline-block; box-shadow: 0 4px 10px rgba(0,86,179,0.2); transition: background-color 0.2s;">
+            Volver al Curso
+        </a>
+    </div>
+</div>
+{% endblock %}
