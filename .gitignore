@@ -4,6 +4,10 @@ venv/
 env/
 .env
 
+htmlcov/
+.coverage
+
+
 # Base de datos local de desarrollo
 *.sqlite3
 

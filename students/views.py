@@ -6,6 +6,7 @@ from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
@@ -150,10 +151,17 @@ def student_submit_quiz(request, quiz_id):
         answer.attempt_id = attempt.id
     QuizAttemptAnswer.objects.bulk_create(answers_to_create)
 
-    course = quiz.module.course
-    progress, _ = StudentProgress.objects.get_or_created(student=request.user,
-                                                         course=course)
-    content_object = quiz.contents.first()
+    quiz_type = ContentType.objects.get_for_model(quiz)
+    content_object = Content.objects.filter(content_type=quiz_type,
+                                            object_id=quiz.id).first()
+    if content_object:
+        course = content_object.module.course
+    else:
+        messages.error(request, "Este examen no está vinculado a ningún módulo activo.")
+        return redirect('students:student_course_list')
+
+    progress, _ = StudentProgress.objects.get_or_create(student=request.user, course=course)
+
     if is_passed and content_object:
         progress.completed_contents.add(content_object)
 
@@ -164,14 +172,12 @@ def student_submit_quiz(request, quiz_id):
                                total_questions=total_questions,
                                passed=is_passed)
 
-    course = quiz.module.course
-    progress, created = StudentProgress.objects.get_or_created(
+    progress, created = StudentProgress.objects.get_or_create(
         student=request.user,
         course=course
     )
 
     # Resultado
-    content_object = quiz.contents.first()
     if is_passed and content_object:
         progress.completed_contents.add(content_object)
 

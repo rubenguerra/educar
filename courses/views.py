@@ -97,8 +97,7 @@ class ContentCreateUpdateView(TemplateResponseMixin, View):
     def get_model(self, model_name):
         allowed_models = Content._meta.get_field('content_type').remote_field.limit_choices_to['model__in']
         if model_name in allowed_models:
-            return apps.get_model(app_label='courses',
-                                  model_name=model_name)
+            return apps.get_model(app_label='courses', model_name=model_name)
         return None
 
     def get_form(self, model, *args, **kwargs):
@@ -114,8 +113,7 @@ class ContentCreateUpdateView(TemplateResponseMixin, View):
 
     def get(self, request, module_id, model_name, id=None):
         form = self.get_form(self.model, instance=self.obj)
-        return self.render_to_response({'form': form,
-                                        'object': self.obj})
+        return self.render_to_response({'form': form, 'object': self.obj})
 
     def post(self, request, module_id, model_name, id=None):
         form = self.get_form(self.model, instance=self.obj, data=request.POST, files=request.FILES)
@@ -126,8 +124,7 @@ class ContentCreateUpdateView(TemplateResponseMixin, View):
             if not id:
                 Content.objects.create(module=self.module, item=obj)
             return redirect('module_content_list', self.module.id)
-        return self.render_to_response({'form': form,
-                                        'object': self.obj})
+        return self.render_to_response({'form': form, 'object': self.obj})
 
 
 class ContentDeleteView(View):
@@ -150,16 +147,14 @@ class ModuleContentListView(TemplateResponseMixin, View):
 class ModuleOrderView(CsrfExemptMixin, JsonRequestResponseMixin, View):
     def post(self, request):
         for id, order in self.request_json.items():
-            Module.objects.filter(id=id,
-                                  course__owner=request.user).update(order=order)
+            Module.objects.filter(id=id, course__owner=request.user).update(order=order)
         return self.render_json_response({'saved': 'OK'})
 
 
 class ContentOrderView(CsrfExemptMixin, JsonRequestResponseMixin, View):
     def post(self, request):
         for id, order in self.request_json.items():
-            Content.objects.filter(id=id,
-                                   module__course__owner=request.user).update(order=order)
+            Content.objects.filter(id=id, module__course__owner=request.user).update(order=order)
         return self.render_json_response({'saved': 'OK'})
 
 
@@ -187,9 +182,7 @@ class CourseListView(TemplateResponseMixin, View):
                 courses = all_courses
                 cache.set('all_courses', courses)
 
-        return self.render_to_response({'subjects': subjects,
-                                        'subject': subject,
-                                        'courses': courses})
+        return self.render_to_response({'subjects': subjects, 'subject': subject, 'courses': courses})
 
 
 class CourseDetailView(DetailView):
@@ -201,6 +194,7 @@ class CourseDetailView(DetailView):
         context['enroll_form'] = CourseEnrollForm(initial={'course': self.object})
         return context
 
+
 @login_required
 def generate_course_ai_analytics(request, course_id):
     course = get_object_or_404(Course, id=course_id, owner=request.user)
@@ -208,8 +202,7 @@ def generate_course_ai_analytics(request, course_id):
     latest_report = course.ai_analytics.first()
 
     if request.method == 'POST':
-        chat_logs = ChatMessage.objects.filter(course=course,
-                                               sender_role='user').order_by('-timestamp')[:200]
+        chat_logs = ChatMessage.objects.filter(course=course, sender_role='user').order_by('-timestamp')[:200]
         total_logs = chat_logs.count()
 
         if total_logs < 5:
@@ -220,7 +213,7 @@ def generate_course_ai_analytics(request, course_id):
             compiled_questions += f'- Estudiante: {log.message}\n'
 
         try:
-            client =OpenAI()
+            client = OpenAI()
 
             prompt_analisis = (
                 f"Actúas como un Consultor Analítico de Datos de Aprendizaje (Learning Analytics) experto.\n"
@@ -235,10 +228,7 @@ def generate_course_ai_analytics(request, course_id):
                 f"LISTA DE CONSULTAS DE LOS ALUMNOS:\n{compiled_questions}"
             )
             response = client.chat.completions.create(
-                model='gpt-4o-mini',
-                messages=[{'role': 'user', 'content': prompt_analisis}],
-                temperature=0.3,
-                max_tokens=1000
+                model='gpt-4o-mini', messages=[{'role': 'user', 'content': prompt_analisis}], temperature=0.3, max_tokens=1000
             )
 
             ai_report = response.choices.message.content.strip()
@@ -253,5 +243,4 @@ def generate_course_ai_analytics(request, course_id):
 
         return redirect('courses:course_ai_analytics', course.id)
     return render(request, 'courses/manage/analytics/report.html',
-                  {'course':course,
-                   'report': latest_report})
+                  {'course':course, 'report': latest_report})

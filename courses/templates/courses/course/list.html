@@ -1,12 +1,10 @@
 {% extends 'base.html' %}
 
-{% block title %}
-{% if subject %}
-Curso {{ subject.title }}
+{% block title %}{% if subject %}
+    Curso {{ subject.title }}
 {% else %}
-Todos los cursos
-{% endif %}
-{% endblock %}
+    Todos los cursos
+{% endif %}{% endblock %}
 
 {% block content %}
 <h1>

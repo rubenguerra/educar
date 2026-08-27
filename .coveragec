@@ -1,0 +1,15 @@
+[run]
+source = .
+omit =
+    *apps.py
+    *migrations*
+    *settings*
+    *urls.py
+    *wsgi.py
+    *asgi.py
+    manage.py
+    .venv/*
+    venv/*
+
+[report]
+show_missing = True
