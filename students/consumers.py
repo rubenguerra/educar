@@ -101,7 +101,7 @@ class AIChatConsumer(AsyncWebsocketConsumer):
                 temperature=0.5
             )
 
-            ai_response = response.choices.message.content.strip()
+            ai_response = response.choices[0].message.content.strip()
 
         except Exception as e:
             ai_response = f"Lo siento, estoy experimentando dificultades técnicas para procesar tu consulta en este momento. (Error: {str(e)})"
