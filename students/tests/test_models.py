@@ -126,26 +126,33 @@ class QuizSubmissionViewTest(TestCase):
 class CourseAccessRestrictionTest(TestCase):
 
     def setUp(self):
-        # 1. Configuración de datos mínimos requeridos por tu estricta base de datos
+        # 1. Configuración de datos mínimos requeridos
         self.subject = Subject.objects.create(title='Seguridad', slug='seguridad')
         self.instructor = User.objects.create_user(username='profesor_sec', password='password123')
         self.student = User.objects.create_user(username='alumno_trampa', password='password123')
 
-        self.course = Course.objects.create(subject=self.subject, owner=self.instructor, title='Hacking Django',
-                                            slug='hacking-django')
+        # 2. Creamos el curso e INSCRIBIMOS al alumno para evitar el error 404 de seguridad
+        self.course = Course.objects.create(
+            subject=self.subject,
+            owner=self.instructor,
+            title='Hacking Django',
+            slug='hacking-django'
+        )
+        self.course.students.add(self.student)  # <--- ¡Línea clave de inscripción!
+
         self.module = Module.objects.create(course=self.course, title='Módulo de Seguridad')
 
-        # 2. Creamos un examen (Quiz) que estará en la posición inicial del módulo
+        # 3. Creamos un examen (Quiz) en la posición inicial (order=1)
         self.quiz = Quiz.objects.create(title='Quiz Inicial Obligatorio', owner=self.instructor)
         quiz_type = ContentType.objects.get_for_model(Quiz)
         self.quiz_content = Content.objects.create(
             module=self.module,
             content_type=quiz_type,
             object_id=self.quiz.id,
-            order=1  # Posición 1
+            order=1
         )
 
-        # 3. Creamos una lectura de texto avanzada que está DESPUÉS del examen
+        # 4. Creamos una lectura avanzada en la posición siguiente (order=2)
         from courses.models import Text
         self.text_item = Text.objects.create(title='Manual Avanzado', content='Contenido ultra secreto',
                                              owner=self.instructor)
@@ -154,37 +161,37 @@ class CourseAccessRestrictionTest(TestCase):
             module=self.module,
             content_type=text_type,
             object_id=self.text_item.id,
-            order=2  # Posición 2 (Bloqueado hasta aprobar la posición 1)
+            order=2
         )
 
-        # URL para intentar ver el curso con el parámetro del contenido avanzado
+        # 5. Generamos la URL usando 'pk' de forma idéntica a tu archivo urls.py
         from django.urls import reverse
         self.course_url = f"{reverse('students:student_course_detail', kwargs={'pk': self.course.id})}?content={self.advanced_content.id}"
 
     def test_student_blocked_if_quiz_not_passed(self):
         """Verifica que el sistema bloquee el acceso si el alumno no ha aprobado el examen previo."""
-        # Logueamos al estudiante
+        # Iniciamos sesión con el alumno inscrito
         self.client.login(username='alumno_trampa', password='password123')
 
-        # Intentamos ingresar directamente al contenido avanzado (orden 2) sin haber tocado el examen (orden 1)
+        # Intenta entrar al contenido avanzado (order=2) sin hacer el examen (order=1)
         response = self.client.get(self.course_url)
 
-        # La vista debe interceptar el peligro, lanzar un mensaje de error y redirigir (302) para salvaguardar el contenido
+        # La vista ahora sí lo reconoce, ejecuta can_access_content, detecta el bloqueo y lo redirige (302)
         self.assertEqual(response.status_code, 302)
 
-        # Simulamos ahora que el alumno hace el examen pero lo REPRUEBA
+        # Simulamos que toma el examen pero saca un 4.0 (reprobado)
         from students.models import QuizAttempt
         QuizAttempt.objects.create(
             student=self.student,
             quiz=self.quiz,
-            score=4.0,  # Nota reprobatoria
+            score=4.0,
             correct_answers=1,
             total_questions=3,
             passed=False
         )
 
-        # Vuelve a intentar forzar la URL del contenido avanzado
+        # Intenta forzar la entrada otra vez
         second_response = self.client.get(self.course_url)
 
-        # Sigue bloqueado porque no ha obtenido el estatus de aprobado (passed=True)
+        # Debe mantenerse redirigido/bloqueado (302) porque no ha aprobado
         self.assertEqual(second_response.status_code, 302)
