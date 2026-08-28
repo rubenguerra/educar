@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
+from datetime import timedelta
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
 from .forms import CourseEnrollForm
@@ -104,6 +105,50 @@ def student_submit_quiz(request, quiz_id):
         return redirect('students:student_course_list')
 
     quiz = get_object_or_404(Quiz, id=quiz_id)
+
+    quiz_type = ContentType.objects.get_for_model(quiz)
+    content_object = Content.objects.filter(content_type=quiz_type,
+                                            object_id=quiz_id).first()
+
+    if content_object:
+        course = content_object.module.course
+    else:
+        messages.error(request, 'Este examen no está vinculado a ningún módulo activo.')
+        return redirect('students:student_course_list')
+
+    hace_24_horas = timezone.now() - timedelta(days=1)
+
+    # contamos los intentos en el día
+    intentos_recientes = QuizAttempt.objects.filter(student=request.user,
+                                                    quiz=quiz,
+                                                    taken_at__gte=hace_24_horas).count()
+
+    if intentos_recientes >= 3:
+        primer_intento_ventana = (QuizAttempt.objects.filter(student=request.user,
+                                                            quiz=quiz,
+                                                            taken_at__gte=hace_24_horas)
+                                  .order_by('taken_at').first())
+
+        hora_desbloqueo = primer_intento_ventana.taken_at + timedelta(days=1)
+
+        diferencia = hora_desbloqueo - timezone.now()
+
+        segundos_totales = diferencia.total_seconds()
+
+        if segundos_totales > 0:
+            horas = int(segundos_totales // 3600)
+            minutos = int((segundos_totales % 3600) // 60)
+        else:
+            horas = 0
+            minutos = 0
+
+        messages.error(request,
+                       f"🔒 Has agotado tus 3 intentos permitidos para este examen. "
+                       f"Podrás intentarlo de nuevo en {horas} horas y {minutos} minutos."
+                       f"¡Aprovecha para repasar el material!"
+                       )
+        return redirect ('students:student_course_detail', course.id if course else quiz.id)
+
     questions = quiz.questions.prefetch_related('choices')
     total_questions = questions.count()
 

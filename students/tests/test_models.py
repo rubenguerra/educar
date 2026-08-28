@@ -122,6 +122,33 @@ class QuizSubmissionViewTest(TestCase):
         self.assertIsNotNone(attempt)
         self.assertEqual(float(attempt.score), 10.0)
 
+    def test_student_exceeds_max_attempts_is_blocked(self):
+        """Verifica que el sistema rechace y bloquee al alumno al intentar un 4to envío en menos de 24 horas."""
+        self.client.login(username='carlos', password='securepass123')
+        form_data = {f'question_{self.question.id}': self.incorrect_choice.id}
+
+        # Simula 3 intentos fallidos consecutivos en el mismo instante
+        from students.models import QuizAttempt
+        for _ in range(3):
+            QuizAttempt.objects.create(
+                student=self.student,
+                quiz=self.quiz,
+                score=2.0,
+                correct_answers=0,
+                total_questions=1,
+                passed=False
+            )
+
+        # Se ejecuta la cuarta petición POST real a la vista
+        response = self.client.post(self.submit_url, data=form_data)
+
+        # Debe saltar la redirección preventiva de seguridad (302)
+        self.assertEqual(response.status_code, 302)
+
+        # Confirmamos que NO se creó un cuarto intento en la base de datos
+        total_intentos = QuizAttempt.objects.filter(student=self.student, quiz=self.quiz).count()
+        self.assertEqual(total_intentos, 3)
+
 
 class CourseAccessRestrictionTest(TestCase):
 

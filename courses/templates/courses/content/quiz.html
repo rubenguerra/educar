@@ -1,5 +1,21 @@
+{% with intentos_totales= item.attempts.all %}
+
+{% endwith %}
+
 <div class="quiz-container" style="border: 2px solid #0056b3; border-radius: 8px; padding: 20px; background-color: #f8f9fa; margin-top: 15px;">
     <h2 style="color: #0056b3; margin-top: 0;">📝 Examen: {{ item.title }}</h2>
+
+    {% if quiz_bloqueado %}
+        <div style="background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 15px; border-radius: 6px; margin-bottom: 20px; font-weight: bold; display: flex; align-items: center; gap: 10px;">
+            <span>🔒</span>
+            <div>
+                Examen Bloqueado Temporalmente. Has alcanzado el límite de 3 intentos en 24 horas.
+                <small style="display: block; font-weight: normal; color: #66521a; margin-top: 2px;">Por favor, repasa los contenidos y vuelve a intentarlo más tarde.</small>
+            </div>
+        </div>
+
+    {% else %}
+
     <p class="text-muted"><em>Responde con atención todas las preguntas antes de enviar la evaluación.</em></p>
     <hr>
 
@@ -42,6 +58,7 @@
             </div>
         {% endif %}
     </form>
+    {% endif %}
 
     <!-- ... Aquí termina el formulario del examen  ... -->
 
