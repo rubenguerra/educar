@@ -12,7 +12,7 @@
 <div class="module">
     <h2>Descripción general</h2>
     <p>
-        <a href="{% url 'course_list_subject' subject.slug %}">
+        <a href="{% url 'courses:course_list_subject' subject.slug %}">
             {{ subject.title }}
         </a>.
         {{ object.modules.count }} módulos.
@@ -20,13 +20,13 @@
     </p>
     {{ object.overview|linebreaks }}
     {% if request.user.is_authenticated %}
-    <form action="{% url 'student_enroll_course' %}" method="post">
+    <form action="{% url 'students:student_enroll_course' %}" method="post">
         {{ enroll_form }}
         {% csrf_token %}
         <input type="submit" value="Inscribir curso">
     </form>
     {% else %}
-    <a href="{% url 'student_registration' %}" class="button">
+    <a href="{% url 'students:student_registration' %}" class="button">
         Regístrate para inscribir cursos.
     </a>
     {% endif %}

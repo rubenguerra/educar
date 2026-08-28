@@ -20,7 +20,7 @@ from .utils import can_access_content
 class StudentRegistrationView(CreateView):
     template_name = 'students/student/registration.html'
     form_class = UserCreationForm
-    success_url = reverse_lazy('student_course_list')
+    success_url = reverse_lazy('students:student_course_list')
 
     def form_valid(self, form):
         response = super().form_valid(form)
@@ -39,7 +39,7 @@ class StudentEnrollCourseView(LoginRequiredMixin, FormView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse_lazy('student_course_detail',
+        return reverse_lazy('students:student_course_detail',
                             args=[self.course.id])
 
 
@@ -80,16 +80,21 @@ class StudentCourseDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        quiz_type = ContentType.objects.get_for_model(Quiz)
 
-        progress, _ = StudentProgress.objects.get_or_created(
+        quiz_ids = Content.objects.filter(
+            module__course=self.object,
+            content_type=quiz_type
+        ).values_list('object_id', flat=True)
+
+        progress, _ = StudentProgress.objects.get_or_create(
             student=self.request.user,
             course=self.object
         )
 
-        context['completed_contents'] = progress.completed_contents.all()
         context['quiz_attempts'] = QuizAttempt.objects.filter(
             student=self.request.user,
-            quiz__module__course=self.object
+            quiz_id__in=quiz_ids,
         ).select_related('quiz').order_by('-taken_at')
 
         return context
