@@ -37,7 +37,8 @@ os.environ['OPENAI_API_KEY'] = env('OPENAI_API_KEY')
 
 ALLOWED_HOSTS = []
 
-LOGIN_REDIRECT_URL = reverse_lazy('student_course_list')
+LOGIN_REDIRECT_URL = reverse_lazy('students:student_course_list')
+#LOGOUT_REDIRECT_URL = reverse_lazy('')
 
 ASGI_APPLICATION = 'educa.asgi.application'
 
@@ -63,6 +64,7 @@ CHANNEL_LAYERS = {
 INSTALLED_APPS = [
     'daphne',
     'channels',
+    'courses.apps.CoursesConfig',
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -71,7 +73,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    'courses.apps.CoursesConfig',
+
     'students.apps.StudentsConfig',
     'chat',
 

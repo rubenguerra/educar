@@ -5,7 +5,62 @@
     {{ object.title }}
 {% endblock %}
 
+
+
 {% block content %}
+
+<!-- Barra lateral de navegación del temario -->
+<div class="sidebar-course-contents" style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+    <h3 style="font-size: 1.1rem; color: #333; margin-bottom: 15px;">📖 Contenidos del Curso</h3>
+
+    {% for module in course.modules.all %}
+        <div class="module-block" style="margin-bottom: 20px;">
+            <h4 style="font-size: 0.95rem; color: #495057; border-bottom: 1px solid #dee2e6; padding-bottom: 5px; margin-bottom: 8px;">
+                Módulo {{ forloop.counter }}: {{ module.title }}
+            </h4>
+
+            <ul style="list-style: none; padding-left: 0; margin: 0;">
+                {% for content in module.contents.all %}
+                    <li style="padding: 8px 10px; margin-bottom: 5px; border-radius: 6px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between;">
+
+                        <!-- CASO A: El contenido está bloqueado por restricción académica -->
+                        {% if content.id in blocked_content_ids %}
+                            <div style="color: #adb5bd; cursor: not-allowed; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; width: 100%;">
+                                <span style="font-size: 1rem;">🔒</span>
+                                <span style="text-decoration: line-through; opacity: 0.7;">{{ content.item.title }}</span>
+                                <span style="margin-left: auto; font-size: 0.7rem; background: #e9ecef; color: #6c757d; padding: 2px 6px; border-radius: 4px; font-weight: bold;">Bloqueado</span>
+                            </div>
+
+                        <!-- CASO B: El acceso está libre para el estudiante -->
+                        {% else %}
+                            <a href="?content={{ content.id }}" style="color: #0056b3; text-decoration: none; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; width: 100%; font-weight: 500;">
+                                {% if content.content_type.model == 'quiz' %}
+                                    <span>📝</span>
+                                {% elif content.content_type.model == 'video' %}
+                                    <span>▶️</span>
+                                {% else %}
+                                    <span>📄</span>
+                                {% endif %}
+
+                                {{ content.item.title }}
+
+                                <!-- Indicador de completado -->
+                                {% if content in completed_contents %}
+                                    <span style="margin-left: auto; color: #28a745; font-weight: bold; font-size: 1rem;">✓</span>
+                                {% endif %}
+                            </a>
+                        {% endif %}
+
+                    </li>
+                {% empty %}
+                    <li style="color: #6c757d; font-size: 0.85rem; font-style: italic; padding-left: 10px;">No hay contenidos cargados.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endfor %}
+</div>
+
+
 <h1>{{ object.title }}</h1>
 
 <div class="contents">
@@ -67,3 +122,5 @@
 <!-- Incluimos de manera limpia el chat flotante de IA -->
 {% include "students/chat/chat_box.html" %}
 {% endblock %}
+
+

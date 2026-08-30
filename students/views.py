@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse_lazy
 from django.views.generic.edit import CreateView, FormView
 from django.views.generic.detail import DetailView
@@ -57,47 +58,59 @@ class StudentCourseDetailView(LoginRequiredMixin, DetailView):
     template_name = 'students/course/detail.html'
     context_object_name = 'course'
 
-    def get_queryset(self):
-        qs = Course.objects.for_student(self.request.user)
-        return qs.prefetch_related('modules', 'modules__contents')
-
-    def get(self, request, *args, **kwargs):
-        self.object = self.get_object()
-
-        content_id = request.GET.get('content')
-        if content_id:
-            try:
-                requested_content = Content.objects.get(id=content_id, module__course=self.object)
-                if not can_access_content(request.user, requested_content):
-                    messages.error(
-                        request,
-                        f"🔒 Contenido bloqueado. Debes aprobar los exámenes previos de este módulo para continuar."
-                    )
-                    return redirect('students:student_course_detail', self.object.id)
-            except Content.DoesNotExist:
-                pass
-        return super().get(request, *args, **kwargs )
-
     def get_context_data(self, **kwargs):
+        # 1. Recuperamos el contexto base de la DetailView nativa
         context = super().get_context_data(**kwargs)
-        quiz_type = ContentType.objects.get_for_model(Quiz)
+        student = self.request.user
+        course = self.object
 
-        quiz_ids = Content.objects.filter(
-            module__course=self.object,
+        # 2. Obtener progreso general (Contenidos completados)
+        progress, _ = StudentProgress.objects.get_or_create(student=student, course=course)
+        context['completed_contents'] = progress.completed_contents.all()
+
+        # 3. Historial de Quizzes (Optimizado y libre de ValueError)
+        quiz_type = ContentType.objects.get_for_model(Quiz)
+        course_quizzes_ids = Content.objects.filter(
+            module__course=course,
             content_type=quiz_type
         ).values_list('object_id', flat=True)
 
-        progress, _ = StudentProgress.objects.get_or_create(
-            student=self.request.user,
-            course=self.object
-        )
-
         context['quiz_attempts'] = QuizAttempt.objects.filter(
-            student=self.request.user,
-            quiz_id__in=quiz_ids,
+            student=student,
+            quiz_id__in=course_quizzes_ids
         ).select_related('quiz').order_by('-taken_at')
 
+        # 4. 🔒 ALGORITMO MAESTRO DE CANDADOS VISUALES
+        blocked_content_ids = set()
+
+        for module in course.modules.all().order_by('order'):
+            module_contents = module.contents.all().order_by('order')
+            examen_previo_reprobado = False
+
+            for content in module_contents:
+                if examen_previo_reprobado:
+                    blocked_content_ids.add(content.id)
+                    continue
+
+                if content.content_type.model == 'quiz':
+                    has_passed = QuizAttempt.objects.filter(
+                        student=student,
+                        quiz_id=content.object_id,
+                        passed=True
+                    ).exists()
+
+                    if not has_passed:
+                        examen_previo_reprobado = True
+
+        context['blocked_content_ids'] = blocked_content_ids
         return context
+
+    # OBLIGATORIO: Si tienes el método get() sobreescrito, asegúrate de que use get_context_data
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        context = self.get_context_data(object=self.object)
+        # Forzamos el renderizado seguro con el contexto unificado
+        return self.render_to_response(context)
 
 
 @login_required

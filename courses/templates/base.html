@@ -11,9 +11,14 @@
     <a href="/" class="logo">Educar</a>
     <ul class="menu">
         {% if request.user.is_authenticated %}
-        <li><a href="{% url 'logout' %}">Salir</a></li>
+        <form action="{% url 'logout' %}" method="post" style="display: inline; margin: 0; padding: 0;">
+            {% csrf_token %}
+            <button type="submit" style="background: none; border: none; color: #0056b3; font-weight: bold; cursor: pointer; font-size: 0.95rem; font-family: inherit; padding: 0;">
+        Cerrar Sesión
+            </button>
+        </form>
         {% else %}
-        <li><a href="{% url 'login' %">Entrar</a></li>
+        <li><a href="{% url 'login' %}">Iniciar Sesión</a></li>
         {% endif %}
     </ul>
 </div>
