@@ -1,54 +1,82 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
-{% block title %}
-    Registrarse - EDUCA
-{% endblock %}
+
+{% block title %}Crear Cuenta - EDUCA{% endblock %}
 
 {% block content %}
-<h1>Crear cuenta</h1>
+<div class="container d-flex align-items-center justify-content-center" style="min-height: 80vh; background-color: #F8F9FA;">
+    <div class="row w-100 justify-content-center">
+        <div class="col-md-8 col-lg-5">
 
-<div class="module">
-    <p>Introduce tus datos para crear una cuenta:</p>
+            <!-- TARJETA PRINCIPAL DE REGISTRO -->
+            <div class="card border-0 shadow-sm p-4 p-md-5" style="border-radius: 16px; background-color: #FFFFFF; border: 1px solid #E2E8F0 !important;">
 
-    <form method="post" novalidate>
-        {% csrf_token %}
+                <!-- Encabezado Emocional (UX) -->
+                <div class="text-center mb-4">
+                    <span class="text-emerald text-uppercase fw-bold small tracking-wider d-block mb-1" style="font-size: 0.75rem; letter-spacing: 1px;">Únete a nuestra comunidad</span>
+                    <h2 class="fw-extrabold text-dark h3 m-0" style="color: #0F172A !important;">Comienza tu aprendizaje</h2>
+                    <p class="text-muted small mt-2">Completa tus datos para crear una cuenta gratuita en EDUCA.</p>
+                </div>
 
-        <!-- 1. Control de errores globales del formulario (ej. fallos de validación cruzada) -->
-        {% if form.non_field_errors %}
-            <div class="alert alert-danger">
-                {% for error in form.non_field_errors %}
-                    <p class="error-message">{{ error }}</p>
-                {% endfor %}
-            </div>
-        {% endif %}
+                <!-- FORMULARIO DE REGISTRO -->
+                <form action="." method="post" class="needs-validation" novalidate>
+                    {% csrf_token %}
 
-        <!-- 2. Renderizado controlado campo por campo -->
-        {% for field in form %}
-            <div class="form-group {% if field.errors %}has-error{% endif %}">
-                <!-- Etiqueta del campo (Username, Password, etc.) -->
-                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    <!-- Bucle estructural nativo de Django para renderizar campos estilizados con Bootstrap -->
+                    <div class="d-flex flex-column gap-3 mb-4">
+                        {% for field in form %}
+                            <div class="form-group">
+                                <label for="{{ field.id_for_label }}" class="form-label small fw-bold text-secondary mb-1">
+                                    {{ field.label }}
+                                </label>
 
-                <!-- El input HTML generado por Django -->
-                {{ field }}
+                                <!-- Inyectamos las clases de control de Bootstrap de forma limpia -->
+                                <div class="input-group">
+                                    <input type="{% if 'password' in field.name %}password{% elif 'email' in field.name %}email{% else %}text{% endif %}"
+                                           name="{{ field.name }}"
+                                           id="{{ field.id_for_label }}"
+                                           class="form-control rounded-3 py-2.5 {% if field.errors %}is-invalid{% endif %}"
+                                           placeholder="Introduce tu {{ field.label|lower }}"
+                                           value="{{ field.value|default_if_none:'' }}"
+                                           required>
 
-                <!-- Textos de ayuda (como los requisitos de la contraseña) -->
-                {% if field.help_text %}
-                    <small class="form-text text-muted">{{ field.help_text }}</small>
-                {% endif %}
+                                    {% if field.errors %}
+                                        <div class="invalid-feedback fw-semibold small">
+                                            {{ field.errors|striptags }}
+                                        </div>
+                                    {% endif %}
+                                </div>
 
-                <!-- Errores específicos del campo justo debajo del input -->
-                {% if field.errors %}
-                    <div class="field-errors">
-                        {% for error in field.errors %}
-                            <p class="text-danger"><small>⚠ {{ error }}</small></p>
+                                {% if field.help_text %}
+                                    <div class="form-text text-muted small mt-1" style="font-size: 0.75rem;">
+                                        {{ field.help_text|safe }}
+                                    </div>
+                                {% endif %}
+                            </div>
                         {% endfor %}
                     </div>
-                {% endif %}
+
+                    <!-- BOTÓN DE ACCIÓN PRINCIPAL (Verde Menta de Éxito) -->
+                    <button type="submit" class="btn btn-emerald w-100 py-2.5 rounded-3 d-flex align-items-center justify-content-center gap-2 mb-3 shadow-sm">
+                        <span>Crear mi Cuenta</span> ➔
+                    </button>
+                </form>
+
+                <hr class="my-4" style="border-top: 1px solid #E2E8F0;">
+
+                <!-- ENLACE DE RETORNO AL LOGIN (UX Fricción Cero) -->
+                <div class="text-center">
+                    <p class="small text-secondary m-0">
+                        ¿Ya tienes una cuenta activa?
+                        <a href="{% url 'login' %}" class="text-emerald fw-bold text-decoration-none ms-1">
+                            Inicia Sesión aquí
+                        </a>
+                    </p>
+                </div>
+
             </div>
-        {% endfor %}
 
-        <p><input type="submit" value="Crear mi cuenta" class="btn-submit"></p>
-    </form>
+        </div>
+    </div>
 </div>
-
 {% endblock %}

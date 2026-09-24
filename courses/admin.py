@@ -21,4 +21,4 @@ class CourseAdmin(admin.ModelAdmin):
     inlines = [ModuleInline]
 
 
-admin.site.index_template = 'memcached_status/admin_index.html'
+

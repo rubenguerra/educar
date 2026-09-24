@@ -1,22 +1,146 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
-{% block title %}Log-in{% endblock %}
+{% block title %}Iniciar Sesión - EDUCA{% endblock %}
 
 {% block content %}
-<h1>Entrar</h1>
-<div class="module">
-    {% if form.errors %}
-    <p>Tu nombre y password no concuerdan, trata de nuevo, por favor.</p>
-    {% else %}
-    <p>Usa este formulario para entrar</p>
-    {% endif %}
-    <div class="login-form">
-        <form action="{% url 'login' %}" method="post">
-            {{ form.as_p }}
-            {% csrf_token %}
-            <input type="hidden" name="next" value="{{ next }}" />
-            <p><input type="submit" value="Entrar"></p>
-        </form>
+<div class="container d-flex align-items-center justify-content-center" style="min-height: 80vh; background-color: #F8F9FA;">
+    <div class="row w-100 justify-content-center">
+        <div class="col-md-6 col-lg-4">
+
+            <!-- TARJETA PRINCIPAL UNIFICADA (Estudiantes + Instructores) -->
+            <div class="card border-0 shadow-sm p-4 p-md-5" style="border-radius: 16px; background-color: #FFFFFF; border: 1px solid #E2E8F0 !important;">
+
+                <!-- 🎛️ SELECCIÓN DE ROL ESTÉTICA (Pestañas Minimalistas de UX) -->
+                <ul class="nav nav-pills nav-justified mb-4 p-1 bg-light rounded-3" id="roleTab" role="tablist" style="font-size: 0.85rem;">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active border-0 w-100 py-2 rounded-2 fw-bold bg-dark-calm text-white transition" id="student-tab" data-bs-toggle="pill" type="button" role="tab" aria-selected="true" onclick="setLoginRole('student')">
+                            🎓 Estudiante
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link border-0 w-100 py-2 rounded-2 fw-bold text-secondary bg-transparent transition" id="teacher-tab" data-bs-toggle="pill" type="button" role="tab" aria-selected="false" onclick="setLoginRole('teacher')">
+                            👨‍🏫 Instructor
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Encabezado con Mensajes Dinámicos -->
+                <div class="text-center mb-4">
+                    <h2 class="fw-extrabold text-dark h3 m-0" id="login-title" style="color: #0F172A !important;">Ingresar a mi Aula</h2>
+                    <p class="text-muted small mt-2" id="login-subtitle">Introduce tus credenciales para acceder a tus cursos virtuales.</p>
+                </div>
+
+                <!-- ALERTA DE ERROR SI LAS CREDENCIALES FALLAN -->
+                {% if form.errors %}
+                    <div class="alert alert-danger rounded-3 p-3 mb-4 small fw-semibold" role="alert">
+                        ❌ Las credenciales son incorrectas. Por favor, vuelve a intentarlo.
+                    </div>
+                {% endif %}
+
+                <!-- FORMULARIO DE ACCESO UNIFICADO -->
+                <form action="." method="post" id="login-form">
+                    {% csrf_token %}
+
+                    <div class="d-flex flex-column gap-3 mb-4">
+                        <!-- Campo: Usuario -->
+                        <div class="form-group">
+                            <label for="{{ form.username.id_for_label }}" class="form-label small fw-bold text-secondary mb-1">
+                                Nombre de usuario
+                            </label>
+                            <input type="text"
+                                   name="username"
+                                   id="{{ form.username.id_for_label }}"
+                                   class="form-control rounded-3 py-2.5"
+                                   placeholder="Tu usuario registrado"
+                                   required>
+                        </div>
+
+                        <!-- Campo: Contraseña -->
+                        <div class="form-group">
+                            <label for="{{ form.password.id_for_label }}" class="form-label small fw-bold text-secondary mb-1">
+                                Contraseña
+                            </label>
+                            <input type="password"
+                                   name="password"
+                                   id="{{ form.password.id_for_label }}"
+                                   class="form-control rounded-3 py-2.5"
+                                   placeholder="Tu contraseña de seguridad"
+                                   required>
+                        </div>
+                    </div>
+
+                    <!-- Si el alumno viene redirigido por intentar forzar una URL privada,
+                         Django inyecta el parámetro ?next=. Lo dejamos aquí por si acaso,
+                         si no viene, el backend usará el Callback automático de roles de settings.py -->
+                    {% if request.GET.next %}
+                        <input type="hidden" name="next" value="{{ request.GET.next }}">
+                    {% endif %}
+
+                    <!-- BOTÓN DE ENTRADA PRINCIPAL -->
+                    <button type="submit" class="btn btn-emerald w-100 py-2.5 rounded-3 d-flex align-items-center justify-content-center gap-2 mb-3 shadow-sm">
+                        <span id="btn-text">Entrar a mi Aula</span> ➔
+                    </button>
+                </form>
+
+                <hr class="my-4" style="border-top: 1px solid #E2E8F0;">
+
+                <!-- CAJA DE REGISTRO DINÁMICO -->
+                <div class="text-center" id="signup-box">
+                    <p class="small text-secondary m-0">
+                        ¿Eres nuevo en la plataforma?
+                        <a href="{% url 'students:student_registration' %}" class="text-emerald fw-bold text-decoration-none ms-1">
+                            Regístrate gratis aquí
+                        </a>
+                    </p>
+                </div>
+
+            </div>
+
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- 🧠 SCRIPT INTERACTIVO DE PORTADA (Modifica únicamente textos visuales en el navegador) -->
+<script>
+    function setLoginRole(role) {
+        const studentBtn = document.getElementById('student-tab');
+        const teacherBtn = document.getElementById('teacher-tab');
+        const title = document.getElementById('login-title');
+        const subtitle = document.getElementById('login-subtitle');
+        const btnText = document.getElementById('btn-text');
+        const signupBox = document.getElementById('signup-box');
+
+        if (role === 'teacher') {
+            // Alternancia estética de colores en las pestañas
+            teacherBtn.classList.add('bg-dark-calm', 'text-white', 'active');
+            teacherBtn.classList.remove('text-secondary', 'bg-transparent');
+            studentBtn.classList.remove('bg-dark-calm', 'text-white', 'active');
+            studentBtn.classList.add('text-secondary', 'bg-transparent');
+
+            // Mensajes adaptados al Instructor
+            title.innerText = "Panel de Instructores";
+            subtitle.innerText = "Ingresa para gestionar tus cátedras, estructurar módulos y actualizar materiales.";
+            btnText.innerText = "Acceder al Panel Docente";
+
+            // Ocultamos la opción de registro libre para los profesores
+            signupBox.style.display = 'none';
+        } else {
+            // Alternancia estética de colores en las pestañas
+            studentBtn.classList.add('bg-dark-calm', 'text-white', 'active');
+            studentBtn.classList.remove('text-secondary', 'bg-transparent');
+            teacherBtn.classList.remove('bg-dark-calm', 'text-white', 'active');
+            teacherBtn.classList.add('text-secondary', 'bg-transparent');
+
+            // Mensajes adaptados al Estudiante
+            title.innerText = "Ingresar a mi Aula";
+            subtitle.innerText = "Introduce tus credenciales para acceder a tus cursos virtuales.";
+            btnText.innerText = "Entrar a mi Aula";
+
+            // Volvemos a mostrar la caja de registro
+            signupBox.style.display = 'block';
+        }
+    }
+</script>
 {% endblock %}

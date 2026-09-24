@@ -12,4 +12,5 @@ urlpatterns = [
          name='student_course_detail_module'),
     path('quiz/<int:quiz_id>/submit/', views.student_submit_quiz, name='student_submit_quiz'),
     path('attempt/<int:attempt_id>/', views.quiz_attempt_detail, name='quiz_attempt_detail'),
+    path('login-callback/', views.login_redirect_view, name='login_callback'),
 ]

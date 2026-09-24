@@ -1,12 +1,45 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
-{% block title %}Salir{% endblock %}
+{% block title %}Sesión Cerrada - EDUCA{% endblock %}
 
 {% block content %}
-<h1>Salir</h1>
-<div class="module">
-    <p>Has salido de forma exitosa.
-    Puedes <a href="{% url 'login' %}">entrar de nuevo</a>
-    </p>
+<div class="container d-flex align-items-center justify-content-center" style="min-height: 80vh; background-color: #F8F9FA;">
+    <div class="row w-100 justify-content-center">
+        <div class="col-md-6 col-lg-4">
+
+            <!-- TARJETA PRINCIPAL DE LOGOUT (Despedida) -->
+            <div class="card border-0 shadow-sm p-4 p-md-5 text-center" style="border-radius: 16px; background-color: #FFFFFF; border: 1px solid #E2E8F0 !important;">
+
+                <!-- Icono de Despedida con Neuroeducación (Gamificación pasiva de salida) -->
+                <div class="mb-4">
+                    <span class="display-3 d-block animate-bounce">👋</span>
+                </div>
+
+                <!-- Mensaje de Cierre de Sesión Seguro (UX) -->
+                <div class="mb-4">
+                    <h2 class="fw-extrabold text-dark h3 mb-2" style="color: #0F172A !important;">¡Sesión cerrada con éxito!</h2>
+                    <p class="text-secondary small mx-auto" style="max-width: 280px; line-height: 1.5;">
+                        Tu progreso académico y conversaciones con el tutor de IA han sido guardados de forma segura.
+                    </p>
+                </div>
+
+                <div class="alert alert-success rounded-3 py-2 px-3 small border-0 fw-medium mb-4" style="background-color: #F0FDF4; color: #15803D;">
+                    🔒 Conexión finalizada de forma segura.
+                </div>
+
+                <!-- BOTÓN DE RETORNO RÁPIDO (Verde Menta de Éxito) -->
+                <a href="{% url 'login' %}" class="btn btn-emerald w-100 py-2.5 rounded-3 d-flex align-items-center justify-content-center gap-2 shadow-sm mb-2">
+                    <span>Volver a Iniciar Sesión</span> ➔
+                </a>
+
+                <!-- Enlace sutil para ir a la página de inicio pública -->
+                <a href="{% url 'course_list' %}" class="btn btn-link text-muted small text-decoration-none mt-2 d-inline-block">
+                    🏠 Explorar Cursos Públicos
+                </a>
+
+            </div>
+
+        </div>
+    </div>
 </div>
 {% endblock %}

@@ -1,51 +1,117 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% load static %}
 
-{% block title %}{% if subject %}
-    Curso {{ subject.title }}
-{% else %}
-    Todos los cursos
-{% endif %}{% endblock %}
+{% block title %}Cursos Disponibles - EDUCA{% endblock %}
 
 {% block content %}
-<h1>
-    {% if subject %}
-    Curso {{ subject.title }}
-    {% else %}
-    Todos los cursos
-    {% endif %}
-</h1>
+<!--
+  Asegúrate de que tu base.html incluya el CDN de Bootstrap en el <head>:
+  <link href="https://jsdelivr.net" rel="stylesheet">
+-->
 
-<div class="contents">
-    <h3>Temas</h3>
-    <ul id="modules">
-        <li {% if not subject %} class="selected" {% endif %}>
-            <a href="{% url 'course_list' %}">Todos</a>
-        </li>
-        {% for s in subjects %}
-        <li {% if subject == s %}class="selected" {% endif %}>
-            <a href="{% url 'courses:course_list_subject' s.slug %}">
-                {{ s.title }}
-                <br><span>{{ s.total_courses }} cursos</span>
-            </a>
-        </li>
+<!-- ESTILOS EXCLUSIVOS DE LA PSICOLOGÍA DEL COLOR (Inyectados limpiamente) -->
+<style>
+    body { background-color: #F8F9FA !important; color: #0F172A; } /* Fondo Hueso Antifatiga */
+    .bg-dark-calm { background-color: #0F172A !important; }       /* Azul Profundo Calmo */
+    .text-emerald { color: #10B981 !important; }                  /* Verde Menta Éxito */
+    .btn-emerald { background-color: #10B981; color: white; border: none; font-weight: 600; }
+    .btn-emerald:hover { background-color: #059669; color: white; }
+    .card-custom { border: 1px solid #E2E8F0; border-radius: 12px; transition: transform 0.2s, box-shadow 0.2s; }
+    .card-custom:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(15, 23, 42, 0.05); }
+</style>
 
-        {% endfor %}
-    </ul>
-</div>
-<div class="module">
-    {% for course in courses %}
-    {% with subject=course.subject %}
-    <h3>
-        <a href="{% url 'courses:course_detail' course.slug %}">
-            {{ course.title }}
-        </a>
-    </h3>
-    <p>
-        <a href="{% url 'courses:course_list_subject' subject.slug %}">{{ subject }}</a>.
-        {{ course.total_modules }} módulos.
-        Instructor: {{ course.owner.get_full_name }}
-    </p>
-    {% endwith %}
-    {% endfor %}
+<!-- 🚀 SECCIÓN HERO: BIENVENIDA E IMPACTO VISUAL -->
+<section class="bg-dark-calm text-white py-5 mb-5 shadow-sm">
+    <div class="container text-center py-4">
+        <span class="text-emerald text-uppercase fw-bold small tracking-wider d-block mb-2">Aprende a tu propio ritmo</span>
+        <h1 class="display-5 fw-extrabold mb-3">Expande tus conocimientos en EDUCA</h1>
+        <p class="lead text-muted-custom mx-auto style-desc" style="max-width: 600px; color: #94A3B8;">
+            Explora cursos interactivos guiados por Inteligencia Artificial y conéctate con tutores expertos.
+        </p>
+    </div>
+</section>
+
+<!-- 🎛️ CONTENEDOR PRINCIPAL: MATERIAS Y CURSOS -->
+<div class="container mb-5">
+    <div class="row g-4">
+
+        <!-- 📂 COLUMNA IZQUIERDA: FILTRO DE MATERIAS (3 de 12 columnas en pantallas grandes) -->
+        <aside class="col-lg-3">
+            <div class="bg-white p-4 rounded-4 shadow-sm border" style="border-color: #E2E8F0 !important;">
+                <h3 class="h6 text-uppercase fw-bold text-secondary mb-3" style="letter-spacing: 0.5px;">Materias</h3>
+                <div class="list-group list-group-flush">
+                    <!-- Enlace para ver todos los cursos -->
+                    <a href="{% url 'course_list' %}" class="list-group-item list-group-item-action border-0 px-2 py-2.5 rounded-3 {% if not subject %}fw-bold text-emerald bg-light{% endif %}">
+                        📚 Todos los cursos
+                    </a>
+
+                    <!-- Bucle real de materias de tu BD -->
+                    {% for s in subjects %}
+                        <a href="{% url 'courses:course_list_subject' s.slug %}" class="list-group-item list-group-item-action border-0 px-2 py-2.5 rounded-3 {% if subject.id == s.id %}fw-bold text-emerald bg-light{% endif %}">
+                            📌 {{ s.title }}
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </aside>
+
+        <!-- 🖥️ COLUMNA DERECHA: GRID DE TARGETAS DE CURSOS (9 de 12 columnas) -->
+        <main class="col-lg-9">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="h4 fw-bold m-0">
+                    {% if subject %} Filtrado por: {{ subject.title }} {% else %} Todos los Cursos {% endif %}
+                </h2>
+                <span class="badge bg-secondary rounded-pill">{{ courses.count }} disponibles</span>
+            </div>
+
+            <!-- RESPONSIVE GRID: 1 columna en móvil, 2 en tablet, 3 en desktop -->
+                        <!-- GRID DE CURSOS RESPONSIVO (Ajustado con flexbox para alinear botones) -->
+            <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+                {% for course in courses %}
+                    <div class="col">
+                        <article class="card h-100 card-custom bg-white shadow-sm d-flex flex-column" style="border-radius: 12px; border: 1px solid #E2E8F0;">
+
+                            <!-- Cuerpo de la tarjeta con Flexbox vertical para empujar el botón al fondo -->
+                            <div class="card-body p-4 d-flex flex-column h-100">
+                                <div class="mb-3">
+                                    <!-- Materia del curso en texto sutil -->
+                                    <span class="text-uppercase text-muted fw-bold d-block mb-1" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+                                        {{ course.subject.title }}
+                                    </span>
+
+                                    <!-- Título principal con peso tipográfico innovador -->
+                                    <h3 class="h5 card-title fw-bold text-dark mb-2" style="line-height: 1.3; min-height: 2.6rem;">
+                                        {{ course.title }}
+                                    </h3>
+
+                                    <!-- Profesor/Instructor encargado -->
+                                    <p class="card-text text-secondary small m-0">
+                                        Instructor: <strong class="text-dark">{{ course.owner.username }}</strong>
+                                    </p>
+                                </div>
+
+                                <!-- Botón de Acción con el verde menta de éxito (Empujado automáticamente al fondo) -->
+                                <div class="mt-auto pt-3">
+                                    <a href="{% url 'courses:course_detail' course.slug %}" class="btn btn-emerald w-100 py-2.5 rounded-3 d-flex align-items-center justify-content-center gap-2">
+                                        <span>Explorar Curso</span> ➔
+                                    </a>
+                                </div>
+                            </div>
+
+                        </article>
+                    </div>
+                {% empty %}
+                    <!-- Estado vacío si una materia no tiene contenidos -->
+                    <div class="col-12 text-center py-5">
+                        <span class="display-4 d-block mb-3">🔍</span>
+                        <h4 class="text-secondary fw-bold">Aún no hay cursos aquí</h4>
+                        <p class="text-muted">Prueba seleccionando otra materia en el menú lateral de la izquierda.</p>
+                    </div>
+                {% endfor %}
+            </div>
+
+        </main>
+
+    </div>
 </div>
 {% endblock %}

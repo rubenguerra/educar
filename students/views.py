@@ -257,3 +257,19 @@ def quiz_attempt_detail(request, attempt_id):
         'answers': answers,
         'course': attempt.quiz.module.course
     })
+
+
+@login_required
+def login_redirect_view(request):
+    """Enrutador seguro en el backend para redirigir según el rol del usuario."""
+    user = request.user
+
+    # Condicional: Si el usuario es instructor (staff o tiene permisos de edición)
+    if user.is_staff or user.groups.filter(name='Instructors').exists():
+        # Lo redirigimos a su lista de material de enseñanza a administrar
+        return redirect('courses:manage_course_list')
+
+    # Si es un estudiante común
+    else:
+        # Lo redirigimos a la lista de cursos en los que está inscrito
+        return redirect('students:student_course_list')

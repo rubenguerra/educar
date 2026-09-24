@@ -37,8 +37,7 @@ os.environ['OPENAI_API_KEY'] = env('OPENAI_API_KEY')
 
 ALLOWED_HOSTS = []
 
-LOGIN_REDIRECT_URL = reverse_lazy('students:student_course_list')
-#LOGOUT_REDIRECT_URL = reverse_lazy('')
+LOGIN_REDIRECT_URL = 'students:login_callback'
 
 ASGI_APPLICATION = 'educa.asgi.application'
 
@@ -151,7 +150,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'es-us'
 
 TIME_ZONE = 'UTC'
 

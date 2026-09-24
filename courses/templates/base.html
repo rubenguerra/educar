@@ -1,31 +1,137 @@
 <!DOCTYPE html>
-{% load static %}
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>{% block title%}EDUCAR{% endblock %}</title>
-    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}EDUCA - Plataforma de Aprendizaje{% endblock %}</title>
+
+    <!-- 📦 CDN DE BOOTSTRAP 5 (Carga rápida en línea) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+
+    <!-- 🧠 CORE DE PSICOLOGÍA DEL COLOR Y NEUROEDUCACIÓN -->
+    <style>
+        /* Fondo Hueso Suave para mitigar la fatiga visual en sesiones largas */
+        body {
+            background-color: #F8F9FA !important;
+            color: #0F172A;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Azul Profundo Calmo para componentes de enfoque y navegación */
+        .bg-dark-calm { background-color: #0F172A !important; }
+
+        /* Verde Menta Energético para botones de éxito e indicadores de progreso */
+        .text-emerald { color: #10B981 !important; }
+        .btn-emerald {
+            background-color: #10B981;
+            color: white;
+            border: none;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        .btn-emerald:hover { background-color: #059669; color: white; }
+
+        /* Estilo sutil para enlaces del Navbar */
+        .nav-link-custom {
+            color: #94A3B8 !important;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+        .nav-link-custom:hover, .nav-link-custom.active {
+            color: #10B981 !important;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
-<div id="header">
-    <a href="/" class="logo">Educar</a>
-    <ul class="menu">
-        {% if request.user.is_authenticated %}
-        <form action="{% url 'logout' %}" method="post" style="display: inline; margin: 0; padding: 0;">
-            {% csrf_token %}
-            <button type="submit" style="background: none; border: none; color: #0056b3; font-weight: bold; cursor: pointer; font-size: 0.95rem; font-family: inherit; padding: 0;">
-        Cerrar Sesión
+
+        <!-- 🗺️ 1. NAVBAR MINIMALISTA DE ALTO CONTRASTE (Perfeccionado en UX Móvil y Escritorio) -->
+    <header class="navbar navbar-expand-lg bg-dark-calm navbar-dark py-3 shadow-sm sticky-top">
+        <div class="container flex-wrap flex-lg-nowrap">
+
+            <!-- ↙️ LOGO DE LA PLATAFORMA (Siempre alineado a la izquierda) -->
+            <a class="navbar-brand fw-extrabold fs-4 tracking-tight m-0" href="{% url 'course_list' %}">
+                ED<span class="text-emerald">UCA</span>
+            </a>
+
+            <!-- 📱 ↘️ BOTÓN HAMBURGUESA: Forzado al extremo derecho en móviles usando utilidades de Bootstrap -->
+            <button class="navbar-toggler border-0 p-2 ms-auto" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Cambiar navegación">
+                <span class="navbar-toggler-icon"></span>
             </button>
-        </form>
-        {% else %}
-        <li><a href="{% url 'login' %}">Iniciar Sesión</a></li>
-        {% endif %}
-    </ul>
-</div>
-<div id="content">
-    {% block content %}
-    {% endblock %}
-</div>
+
+            <!-- 🏢 CONTENEDOR DESPLEGABLE INTERACTIVO (Alterna abrir/cerrar automáticamente en móviles) -->
+            <div class="collapse navbar-collapse w-100" id="navbarNav">
+
+
+
+                <!-- 🎯 CENTRO: ENLACE PRINCIPAL TOTALMENTE CENTRADO EN ESCRITORIO -->
+                <ul class="navbar-nav mx-auto my-3 my-lg-0 text-center">
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-custom px-3 py-2 rounded-2 {% if request.resolver_match.url_name == 'course_list' %}active fw-bold text-emerald{% endif %}" href="{% url 'course_list' %}">
+                            📚 Explorar Todos los Cursos
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- 👤 EXTREMO DERECHO: GESTIÓN DE SESIÓN -->
+                <div class="d-flex align-items-center justify-content-center justify-content-lg-end gap-3 text-center flex-wrap flex-lg-nowrap pt-2 pt-lg-0 border-top border-secondary border-opacity-25 border-lg-0">
+                    {% if request.user.is_authenticated %}
+                        <span class="text-light small opacity-75">
+                            👋 Hola, <strong class="text-white">{{ request.user.username }}</strong>
+                        </span>
+
+                        <!-- FORMULARIO SEGURO DE LOGOUT -->
+                        <form action="{% url 'logout' %}" method="post" class="m-0 p-0">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-light btn-sm border-0 opacity-75 nav-link-custom py-1" style="font-weight:600;">
+                                🚪 Cerrar Sesión
+                            </button>
+                        </form>
+                    {% else %}
+                        <a href="{% url 'login' %}" class="btn btn-outline-light btn-sm border-0 nav-link-custom py-1">Iniciar Sesión</a>
+                        <a href="{% url 'students:student_registration' %}" class="btn btn-emerald btn-sm px-3 py-2 rounded-2">Registrarse</a>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+
+
+    <!-- 📌 2. MENSAJES FLOTANTES DE ALERTA DE DJANGO (Toast/Alerts) -->
+    {% if messages %}
+        <div class="container mt-4">
+            {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show rounded-3 shadow-sm" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- 🖥️ 3. CONTENEDOR INYECTOR DE CONTENIDO DE VISTAS (Flexible) -->
+    <main class="flex-grow-1">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- 🗪 4. INCLUSIÓN GLOBAL DEL CHAT FLOTANTE DE IA -->
+    <!-- Se mantendrá disponible en todas las vistas de forma no intrusiva -->
+    {% if request.user.is_authenticated and course %}
+        {% include "students/chat/chat_box.html" %}
+    {% endif %}
+
+    <!-- 📦 JS DE BOOTSTRAP 5 (Indispensable para componentes interactivos y alertas) -->
+    <!-- Reemplaza el script anterior por su equivalente completo de cdnjs -->
+<!-- Reemplaza la línea anterior de CSS por esta URL directa y exacta -->
+
+    
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js"></script>
@@ -35,5 +141,20 @@
         {% endblock %}
     });
 </script>
+
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" integrity="sha384-G/EV+4j2dNv+tEPo3++6LCgdCROaejBqfUeNjuKAiuXbjrxilcCdDz6ZAVfHWe1Y" crossorigin="anonymous"></script>
+
 </body>
+</html>
+
+
+</body>
+
 </html>
