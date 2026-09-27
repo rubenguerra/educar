@@ -1,126 +1,136 @@
-{% extends 'base.html' %}
-{% load cache %}
-
-{% block title %}
-    {{ object.title }}
-{% endblock %}
-
-
+{% extends "base.html" %}
+{% block title %}{{ course.title }} - Espacio de Aprendizaje{% endblock %}
 
 {% block content %}
+<!-- ESTILOS ADICIONALES PARA BLINDAR LA PSICOLOGÍA DEL COLOR -->
+<style>
+    .bg-hueso { background-color: #F8F9FA; }
+    .text-slate { color: #0F172A; }
+    .text-emerald { color: #10B981 !important; }
+    .bg-emerald-light { background-color: #F0FDF4 !important; }
+    .border-emerald { border-color: #10B981 !important; }
+    .card-timeline { border-radius: 14px; border: 1px solid #E2E8F0; transition: all 0.2s; }
+    .card-timeline:hover:not(.disabled) { border-color: #10B981; transform: translateY(-2px); }
+    .sticky-sidebar { position: sticky; top: 90px; max-height: 85vh; overflow-y: auto; }
+</style>
 
-<!-- Barra lateral de navegación del temario -->
-<div class="sidebar-course-contents" style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
-    <h3 style="font-size: 1.1rem; color: #333; margin-bottom: 15px;">📖 Contenidos del Curso</h3>
+<div class="bg-hueso py-4 min-vh-100">
+    <div class="container-fluid px-lg-5">
+        <div class="row g-4">
 
-    {% for module in course.modules.all %}
-        <div class="module-block" style="margin-bottom: 20px;">
-            <h4 style="font-size: 0.95rem; color: #495057; border-bottom: 1px solid #dee2e6; padding-bottom: 5px; margin-bottom: 8px;">
-                Módulo {{ forloop.counter }}: {{ module.title }}
-            </h4>
+            <!-- 📄 COLUMNA IZQUIERDA: LA BITÁCORA DEL VIAJE (4 de 12 columnas) -->
+            <aside class="col-xl-4 col-lg-5">
+                <div class="sticky-sidebar bg-white p-4 rounded-4 shadow-sm border" style="border-color: #E2E8F0 !important;">
 
-            <ul style="list-style: none; padding-left: 0; margin: 0;">
-                {% for content in module.contents.all %}
-                    <li style="padding: 8px 10px; margin-bottom: 5px; border-radius: 6px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between;">
+                    <!-- Encabezado del Progreso -->
+                    <div class="mb-4">
+                        <span class="text-emerald text-uppercase fw-bold small tracking-wider d-block mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Mi Ruta de Aprendizaje</span>
+                        <h1 class="h4 fw-extrabold text-slate m-0" style="line-height: 1.2;">{{ course.title }}</h1>
+                    </div>
 
-                        <!-- CASO A: El contenido está bloqueado por restricción académica -->
-                        {% if content.id in blocked_content_ids %}
-                            <div style="color: #adb5bd; cursor: not-allowed; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; width: 100%;">
-                                <span style="font-size: 1rem;">🔒</span>
-                                <span style="text-decoration: line-through; opacity: 0.7;">{{ content.item.title }}</span>
-                                <span style="margin-left: auto; font-size: 0.7rem; background: #e9ecef; color: #6c757d; padding: 2px 6px; border-radius: 4px; font-weight: bold;">Bloqueado</span>
+                    <hr class="my-3" style="color: #E2E8F0;">
+
+                    <!-- MAPA CRONOLÓGICO DE MÓDULOS -->
+                    <div class="d-flex flex-column gap-4">
+                        {% for module in course.modules.all|dictsort:"order" %}
+                            <div class="module-section">
+                                <h2 class="h6 text-uppercase fw-bold text-secondary mb-3 d-flex align-items-center gap-2" style="font-size: 0.8rem; letter-spacing: 0.5px;">
+                                    <span>📦</span> Módulo {{ forloop.counter }}: {{ module.title }}
+                                </h2>
+
+                                <nav class="d-flex flex-column gap-2">
+                                    {% for content in module.contents.all|dictsort:"order" %}
+
+                                        <!-- CASO 1: CONTENIDO BLOQUEADO POR RESTRICCIÓN ACADÉMICA -->
+                                        {% if content.id in blocked_content_ids %}
+                                            <div class="card-timeline disabled p-3 d-flex align-items-center gap-3 bg-light text-muted border-dashed" style="border-style: dashed; opacity: 0.65; cursor: not-allowed;">
+                                                <span class="fs-5" style="color: #F59E0B;">🔒</span>
+                                                <div class="w-100">
+                                                    <span class="text-decoration-line-through small fw-medium text-secondary">{{ content.item.title }}</span>
+                                                </div>
+                                                <span class="badge bg-secondary-subtle text-secondary rounded-2 px-2 py-1" style="font-size: 0.65rem; font-weight: 700;">Bloqueado</span>
+                                            </div>
+
+                                        <!-- CASO 2: CONTENIDO LIBRE Y DISPONIBLE -->
+                                        {% else %}
+                                            <a href="?content={{ content.id }}"
+                                               class="card-timeline p-3 d-flex align-items-center gap-3 text-decoration-none bg-white text-slate
+                                               {% if current_content.id == content.id %}border-emerald bg-emerald-light{% endif %}">
+
+                                                <!-- Íconos de UX según el tipo polimórfico de contenido -->
+                                                <span class="fs-5">
+                                                    {% if content.content_type.model == 'quiz' %}📝{% elif content.content_type.model == 'video' %}▶️{% else %}📄{% endif %}
+                                                </span>
+
+                                                <div class="me-auto">
+                                                    <span class="small fw-semibold {% if current_content.id == content.id %}text-emerald{% endif %}">
+                                                        {{ content.item.title }}
+                                                    </span>
+                                                </div>
+
+                                                <!-- Check Verde si el tema ya fue completado -->
+                                                {% if content in completed_contents %}
+                                                    <span class="bg-success text-white d-flex align-items-center justify-content-center rounded-circle" style="width: 20px; height: 20px; font-size: 0.75rem; font-weight: 800;">✓</span>
+                                                {% endif %}
+                                            </a>
+                                        {% endif %}
+
+                                    {% endfor %}
+                                </nav>
+                            </div>
+                        {% empty %}
+                            <p class="text-muted small italic p-2">Este curso aún no tiene lecciones configuradas.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </aside>
+
+            <!-- 🖥️ COLUMNA DERECHA: EL ESPACIO DE ENFOQUE (8 de 12 columnas) -->
+            <main class="col-xl-8 col-lg-7">
+                <div class="bg-white p-4 p-md-5 rounded-4 shadow-sm border h-100" style="border-color: #E2E8F0 !important; min-height: 75vh;">
+
+                    {% if current_content %}
+                        <!-- Cabecera de la Lección Actual -->
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                            <div>
+                                <span class="text-uppercase text-secondary fw-bold small" style="font-size: 0.75rem; letter-spacing: 0.5px;">Estás estudiando:</span>
+                                <h2 class="h3 fw-extrabold text-slate m-0 mt-1">{{ current_content.item.title }}</h2>
                             </div>
 
-                        <!-- CASO B: El acceso está libre para el estudiante -->
-                        {% else %}
-                            <a href="?content={{ content.id }}" style="color: #0056b3; text-decoration: none; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; width: 100%; font-weight: 500;">
-                                {% if content.content_type.model == 'quiz' %}
-                                    <span>📝</span>
-                                {% elif content.content_type.model == 'video' %}
-                                    <span>▶️</span>
-                                {% else %}
-                                    <span>📄</span>
-                                {% endif %}
+                            <!-- Botón de UX para marcar Progreso (Solo si no está completado ya) -->
+                            {% if current_content not in completed_contents %}
+                                <form action="#" method="post" class="m-0">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-emerald px-4 py-2.5 rounded-3 shadow-sm d-flex align-items-center gap-2">
+                                        <span>✓</span> Completar esta Lección
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
 
-                                {{ content.item.title }}
+                        <hr class="my-4" style="color: #E2E8F0;">
 
-                                <!-- Indicador de completado -->
-                                {% if content in completed_contents %}
-                                    <span style="margin-left: auto; color: #28a745; font-weight: bold; font-size: 1rem;">✓</span>
-                                {% endif %}
-                            </a>
-                        {% endif %}
+                        <!-- CONTENIDO MULTIMEDIA POLIMÓRFICO REAL -->
+                        <div class="content-render-area lh-base fs-5 text-secondary-emphasis" style="color: #334155 !important;">
+                            <!-- Django renderiza aquí el HTML nativo del texto, video o Quiz de tu BD -->
+                            {{ current_content.render }}
+                        </div>
 
-                    </li>
-                {% empty %}
-                    <li style="color: #6c757d; font-size: 0.85rem; font-style: italic; padding-left: 10px;">No hay contenidos cargados.</li>
-                {% endfor %}
-            </ul>
+                    {% else %}
+                        <!-- Estado de bienvenida pasivo si no ha seleccionado nada -->
+                        <div class="d-flex flex-column align-items-center justify-content-center text-center h-100 py-5 my-auto" style="min-height: 50vh;">
+                            <div class="display-1 mb-3">🚀</div>
+                            <h3 class="fw-extrabold text-slate mb-2">¡Tu viaje de aprendizaje te espera!</h3>
+                            <p class="text-muted mx-auto" style="max-width: 420px; font-size: 0.95rem; line-height: 1.5;">
+                                Selecciona el primer tema disponible en tu bitácora de la izquierda para encender tu espacio de enfoque y comenzar a estudiar.
+                            </p>
+                        </div>
+                    {% endif %}
+
+                </div>
+            </main>
+
         </div>
-    {% endfor %}
+    </div>
 </div>
-
-
-<h1>{{ object.title }}</h1>
-
-<div class="contents">
-    <h3>Módulos</h3>
-    <ul id="modules">
-        {% for m in object.modules.all %}
-            <li data-id="{{ m.id }}" {% if m == module %} class="selected" {% endif %}>
-                <a href="{% url 'students:student_course_detail_module' object.id m.id %}">
-                    <span>
-                        Módulo <span class="order">{{ m.order|add:1 }}</span>
-                    </span>
-                    <br>
-                    {{ m.title }}
-                </a>
-            </li>
-        {% empty %}
-            <!-- Corrección: Mensaje amigable si el curso está vacío -->
-            <li>No hay módulos creados para este curso todavía.</li>
-        {% endfor %}
-    </ul>
-
-    <h3>
-        <a href="{% url 'chat:course_chat_room' object.id %}">
-            Sala de chat del Curso
-        </a>
-    </h3>
-</div>
-
-<div class="module">
-    <!-- CORRECCIÓN CRÍTICA: Validamos que exista un módulo antes de activar la caché y los bucles -->
-    {% if module %}
-        <h2>{{ module.title }}</h2>
-        <p>{{ module.description }}</p>
-
-        <!-- Activamos la caché de forma segura ya que 'module' no es None -->
-        {% cache 600 module_contents module.id %}
-            {% for content in module.contents.all %}
-                {% with item=content.item %}
-                    <h3>{{ item.title }}</h3>
-                    <!-- Renderizado polimórfico de texto, video, imagen, archivo -->
-                    <div class="content-item">
-                        {{ item.render }}
-                    </div>
-                {% endwith %}
-            {% empty %}
-                <p>Este módulo no contiene material de estudio por el momento.</p>
-            {% endfor %}
-        {% endcache %}
-
-    {% else %}
-        <!-- Estado vacío elegante si el curso no tiene ningún módulo aún -->
-        <div class="alert alert-info">
-            <h2>Bienvenido a {{ object.title }}</h2>
-            <p>El profesor aún no ha publicado módulos ni contenidos en este curso. ¡Vuelve pronto!</p>
-        </div>
-    {% endif %}
-</div>
-
-<!-- Incluimos de manera limpia el chat flotante de IA -->
-{% include "students/chat/chat_box.html" %}
 {% endblock %}
-
-

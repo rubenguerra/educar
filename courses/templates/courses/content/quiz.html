@@ -1,123 +1,125 @@
-{% with intentos_totales= item.attempts.all %}
+<!-- 📝 CONTENEDOR MAESTRO DEL EXAMEN INTEGRADO EN EL ESPACIO DE ENFOQUE -->
+<div class="quiz-evaluation-wrapper" style="font-family: 'Segoe UI', system-ui, sans-serif;">
 
-{% endwith %}
-
-<div class="quiz-container" style="border: 2px solid #0056b3; border-radius: 8px; padding: 20px; background-color: #f8f9fa; margin-top: 15px;">
-    <h2 style="color: #0056b3; margin-top: 0;">📝 Examen: {{ item.title }}</h2>
-
+    <!-- 🔒 EVALUACIÓN DE DISPONIBILIDAD (Restricción de 3 intentos en 24h que programamos) -->
     {% if quiz_bloqueado %}
-        <div style="background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 15px; border-radius: 6px; margin-bottom: 20px; font-weight: bold; display: flex; align-items: center; gap: 10px;">
-            <span>🔒</span>
-            <div>
-                Examen Bloqueado Temporalmente. Has alcanzado el límite de 3 intentos en 24 horas.
-                <small style="display: block; font-weight: normal; color: #66521a; margin-top: 2px;">Por favor, repasa los contenidos y vuelve a intentarlo más tarde.</small>
+        <div class="card border-0 p-4 text-center shadow-sm" style="border-radius: 16px; background-color: #FFF3CD; border: 1px solid #FFE0B2 !important;">
+            <div class="mb-3">
+                <span class="display-5 d-block" style="color: #F59E0B;">🔒</span>
             </div>
+            <h3 class="h5 fw-extrabold" style="color: #B45309;">Examen Bloqueado Temporalmente</h3>
+            <p class="small m-0 mt-2 text-secondary" style="max-width: 440px; margin: 0 auto !important; line-height: 1.5;">
+                Has alcanzado el límite máximo de **3 intentos permitidos en las últimas 24 horas**. Por favor, aprovecha este tiempo para repasar los contenidos del módulo y regresa más tarde. ¡Tu esfuerzo dará frutos!
+            </p>
         </div>
-
     {% else %}
 
-    <p class="text-muted"><em>Responde con atención todas las preguntas antes de enviar la evaluación.</em></p>
-    <hr>
+        <!-- ENCABEZADO FORMATIVO DEL EXAMEN -->
+        <div class="mb-4">
+            <span class="text-emerald text-uppercase fw-bold small tracking-wider d-block mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Evaluación Formativa</span>
+            <h2 class="h4 fw-extrabold text-slate m-0" style="color: #0F172A;">{{ item.title }}</h2>
+            <p class="text-muted small m-0 mt-2" style="line-height: 1.5;">
+                Responde con atención cada una de las siguientes interrogantes. Tienes un máximo de **3 intentos cada 24 horas** para superar esta validación de conocimientos.
+            </p>
+        </div>
 
-    <!-- Formulario seguro para procesar las respuestas del alumno -->
-    <form action="{% url 'students:student_submit_quiz' item.id %}" method="post" id="quiz-evaluation-form">
-        {% csrf_token %}
+        <hr class="my-4" style="color: #E2E8F0;">
 
-        <!-- Iteramos sobre las preguntas asociadas a este Quiz específico -->
-        {% for question in item.questions.all %}
-            <div class="quiz-question" style="margin-bottom: 25px;">
-                <p style="font-size: 1.1rem; font-weight: bold; margin-bottom: 10px;">
-                    {{ forloop.counter }}. {{ question.text }}
-                </p>
+        <!-- FORMULARIO DE RESPUESTAS DEL ESTUDIANTE -->
+        <form action="{% url 'students:student_submit_quiz' item.id %}" method="post" id="quiz-submission-form" novalidate>
+            {% csrf_token %}
 
-                <!-- Iteramos sobre las opciones de respuesta de la pregunta -->
-                <div class="quiz-choices" style="padding-left: 15px;">
-                    {% for choice in question.choices.all %}
-                        <div class="form-check" style="margin-bottom: 8px;">
-                            <input class="form-check-input"
-                                   type="radio"
-                                   name="question_{{ question.id }}"
-                                   id="choice_{{ choice.id }}"
-                                   value="{{ choice.id }}"
-                                   required>
-                            <label class="form-check-label" for="choice_{{ choice.id }}" style="margin-left: 5px; cursor: pointer;">
-                                {{ choice.text }}
-                            </label>
+            <!-- CONTENEDOR VERTICAL DE PREGUNTAS -->
+            <div class="d-flex flex-column gap-4">
+                {% for question in item.questions.all %}
+                    <div class="card border-0 shadow-sm p-4 p-md-5" style="border-radius: 16px; background-color: #FFFFFF; border: 1px solid #E2E8F0 !important;">
+
+                        <!-- Enunciado de la Pregunta -->
+                        <div class="d-flex align-items-start gap-3 mb-4">
+                            <span class="badge bg-dark-calm text-white px-3 py-2 rounded-3 small fw-bold" style="background-color: #0F172A !important;">
+                                Pregunta {{ forloop.counter }}
+                            </span>
+                            <h3 class="h5 fw-bold text-slate m-0 pt-1" style="line-height: 1.4; color: #0F172A;">
+                                {{ question.text }}
+                            </h3>
                         </div>
-                    {% endfor %}
+
+                        <!-- Opciones de Respuesta Múltiple (UX Adaptable) -->
+                        <!-- Renderiza las alternativas en una grilla de 1 columna en móvil y 2 en pantallas grandes -->
+                        <div class="row row-cols-1 row-cols-lg-2 g-3">
+                            {% for answer in question.answers.all %}
+                                <div class="col">
+                                    <label class="d-flex align-items-center gap-3 p-3 rounded-3 border option-label-box"
+                                           for="answer_{{ answer.id }}"
+                                           style="cursor: pointer; background-color: #FFFFFF; border-color: #CBD5E1; transition: all 0.2s; width: 100%;"
+                                           onmouseover="this.style.borderColor='#10B981'; this.style.backgroundColor='#F0FDF4';"
+                                           onmouseout="if(!document.getElementById('answer_{{ answer.id }}').checked) { this.style.borderColor='#CBD5E1'; this.style.backgroundColor='#FFFFFF'; }">
+
+                                        <!-- Radio input oculto u optimizado nativamente con Bootstrap -->
+                                        <input type="radio"
+                                               name="question_{{ question.id }}"
+                                               id="answer_{{ answer.id }}"
+                                               value="{{ answer.id }}"
+                                               class="form-check-input m-0 flex-shrink-0 border-secondary quiz-radio-input"
+                                               style="transform: scale(1.1); cursor: pointer;"
+                                               required
+                                               onclick="highlightSelectedOption('question_{{ question.id }}', 'answer_{{ answer.id }}')">
+
+                                        <span class="small fw-medium text-secondary-emphasis" style="line-height: 1.4; color: #334155;">
+                                            {{ answer.text }}
+                                        </span>
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                    </div>
+                {% empty %}
+                    <div class="text-center py-5 text-muted border border-dashed rounded-4">
+                        <span class="display-5 d-block mb-2">📝</span>
+                        <p class="small m-0 italic">Este examen no contiene preguntas configuradas por el instructor en este momento.</p>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- BOTÓN DE ENVÍO DE EVALUACIÓN (Solo si el examen tiene preguntas reales) -->
+            {% if item.questions.exists %}
+                <div class="d-flex justify-content-end mt-5">
+                    <button type="submit" class="btn btn-emerald px-5 py-3 rounded-3 d-flex align-items-center justify-content-center gap-2 fw-bold shadow-sm" style="font-size: 1rem;">
+                        <span>💾 Enviar mis Respuestas</span> ➔
+                    </button>
                 </div>
-            </div>
-            {% if not forloop.last %}<hr style="border-top: 1px dashed #ccc;">{% endif %}
-        {% empty %}
-            <p class="alert alert-warning">Este examen aún no contiene preguntas cargadas por el profesor.</p>
-        {% endfor %}
+            {% endif %}
 
-        {% if item.questions.exists %}
-            <div style="margin-top: 20px; text-align: right;">
-                <input type="submit" value="Enviar mis Respuestas" class="btn btn-primary" style="background-color: #0056b3; color: white; border: none; padding: 10px 25px; font-weight: bold; border-radius: 4px; cursor: pointer;">
-            </div>
-        {% endif %}
-    </form>
+        </form>
     {% endif %}
-
-    <!-- ... Aquí termina el formulario del examen  ... -->
-
-<!-- SECCIÓN DE HISTORIAL DE INTENTOS -->
-<div class="quiz-history-container" style="margin-top: 30px; border-top: 2px solid #dee2e6; padding-top: 20px;">
-    <h3 style="color: #495057; font-size: 1.25rem; margin-bottom: 15px;">📊 Tu Historial de Intentos para este Examen</h3>
-
-    <!-- Filtramos los intentos pasados por el contexto que correspondan a este Quiz específico -->
-    {% version_matched_attempts as local_attempts %}
-
-    <div class="table-responsive" style="background: white; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-        <table class="table" style="width: 100%; margin-bottom: 0; border-collapse: collapse; text-align: left;">
-            <thead>
-                <tr style="background-color: #e9ecef; color: #495057; border-bottom: 2px solid #dee2e6;">
-                    <th style="padding: 12px;">Fecha y Hora</th>
-                    <th style="padding: 12px; text-align: center;">Resultado</th>
-                    <th style="padding: 12px; text-align: center;">
-                        Calificación
-                    </th>
-                    <th style="padding: 12px; text-align: center;">Aciertos</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if quiz_attempts %}
-                    {% for attempt in quiz_attempts %}
-                        {% if attempt.quiz_id == item.id %}
-                            <tr style="border-bottom: 1px solid #dee2e6; transition: background-color 0.2s;">
-                                <td style="padding: 12px; color: #6c757d;">
-                                    {{ attempt.taken_at|date:"d/m/Y H:i" }}
-                                    <small style="display: block; font-size: 0.75rem;">{{ attempt.taken_at|timesince }} atrás</small>
-                                </td>
-                                <td style="padding: 12px; text-align: center;">
-                                    {% if attempt.passed %}
-                                        <span style="background-color: #d4edda; color: #155724; padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: bold;">Aprobado</span>
-                                    {% else: %}
-                                        <span style="background-color: #f8d7da; color: #721c24; padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: bold;">Reprobado</span>
-                                    {% endif %}
-                                </td>
-                                <td style="padding: 12px; text-align: center; font-weight: bold; color: {% if attempt.passed %}#155724{% else %}#721c24{% endif %};">
-                                    <a href="{% url 'students:quiz_attempt_detail' attempt.id %}" style="color: #0056b3; font-weight: bold; text-decoration: underline;">
-                                        {{ attempt.score }} / 10.0
-                                    </a>
-                                </td>
-                                <td style="padding: 12px; text-align: center; color: #495057;">
-                                    {{ attempt.correct_answers }} de {{ attempt.total_questions }}
-                                </td>
-                            </tr>
-                        {% endif %}
-                    {% endfor %}
-                {% else %}
-                    <tr>
-                        <td colspan="4" style="padding: 20px; text-align: center; color: #6c757d; font-style: italic;">
-                            Aún no has realizado ningún intento para este examen.
-                        </td>
-                    </tr>
-                {% endif %}
-            </tbody>
-        </table>
-    </div>
 </div>
 
-</div>
+<!-- 🧠 SCRIPT COMPLEMENTARIO DE INTERACTIVIDAD UX (Feedback visual inmediato al seleccionar) -->
+<script>
+    function highlightSelectedOption(questionName, selectedId) {
+        // Buscamos todos los inputs tipo radio que pertenezcan a la misma pregunta
+        const radios = document.querySelectorAll(`input[name="${questionName}"]`);
+
+        radios.forEach(radio => {
+            // Buscamos el contenedor <label> padre de cada radio input
+            const labelContainer = radio.closest('label');
+
+            if (radio.id === selectedId) {
+                // Si es la opción seleccionada por el estudiante, la pintamos con el verde menta de éxito
+                labelContainer.style.borderColor = '#10B981';
+                labelContainer.style.backgroundColor = '#DCFCE7';
+                labelContainer.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.15)';
+                radio.classList.remove('border-secondary');
+                radio.classList.add('border-success', 'bg-success');
+            } else {
+                // Limpiamos los estilos de las opciones alternativas no seleccionadas
+                labelContainer.style.borderColor = '#CBD5E1';
+                labelContainer.style.backgroundColor = '#FFFFFF';
+                labelContainer.style.boxShadow = 'none';
+                radio.classList.remove('border-success', 'bg-success');
+                radio.classList.add('border-secondary');
+            }
+        });
+    }
+</script>

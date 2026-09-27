@@ -1,27 +1,135 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
 {% block title %}
-{% if object %}
-Edit course '{{ object.title }}'
-{% else %}
-Create new course
-{% endif %}
+    {% if object %}Editar Curso: {{ object.title }}{% else %}Crear Nuevo Curso{% endif %} - EDUCA
 {% endblock %}
 
 {% block content %}
-<h1>
-    {% if object %}
-    Edit curso '{{ object.title }}'
-    {% else %}
-    Create a new course
-    {% endif %}
-</h1>
-<div class="module">
-    <h2>Course info</h2>
-    <form action="" method="post">
-        {{ form.as_p }}
-        {% csrf_token %}
-        <p><input type="submit" value="Save course"></p>
-    </form>
+<div class="container d-flex align-items-center justify-content-center" style="min-height: 85vh; background-color: #F8F9FA;">
+    <div class="row w-100 justify-content-center py-5">
+        <div class="col-md-10 col-lg-7">
+
+            <!-- TARJETA PRINCIPAL DEL FORMULARIO -->
+            <div class="card border-0 shadow-sm p-4 p-md-5" style="border-radius: 16px; background-color: #FFFFFF; border: 1px solid #E2E8F0 !important;">
+
+                <!-- Encabezado Guiado (UX) -->
+                <div class="mb-4">
+                    <span class="text-emerald text-uppercase fw-bold small tracking-wider d-block mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Panel del Instructor</span>
+                    <h1 class="fw-extrabold text-slate h2 m-0" style="color: #0F172A !important;">
+                        {% if object %}Editar Asignatura{% else %}Crear Nueva Cátedra{% endif %}
+                    </h1>
+                    <p class="text-muted small mt-2">Completa los campos principales para estructurar el programa de estudio de tu curso.</p>
+                </div>
+
+                <hr class="mb-4" style="color: #E2E8F0;">
+
+                <!-- FORMULARIO DE ACCIÓN -->
+                <form action="." method="post" class="needs-validation" novalidate>
+                    {% csrf_token %}
+
+                    <!-- Contenedor con espaciado vertical armónico -->
+                    <div class="d-flex flex-column gap-4 mb-4">
+                        {% for field in form %}
+                            <!-- 🔒 DETECTAMOS SI EL CAMPO ES EL SLUG PARA MANEJARLO DE FORMA INVISIBLE -->
+                            <div class="form-group {% if field.name == 'slug' %}d-none{% endif %}">
+                                <label for="{{ field.id_for_label }}" class="form-label small fw-bold text-secondary mb-1">
+                                    {{ field.label }}
+                                </label>
+
+                                <div class="input-group">
+                                    {% if field.field.widget.input_type == 'select' or 'select' in field.field.widget.attrs.class or not field.field.widget.input_type %}
+                                        {{ field }}
+                                    {% else %}
+                                        <input type="{{ field.field.widget.input_type|default:'text' }}"
+                                               name="{{ field.name }}"
+                                               id="{{ field.id_for_label }}"
+                                               class="form-control rounded-3 py-2.5 {% if field.errors %}is-invalid{% endif %}"
+                                               value="{{ field.value|default_if_none:'' }}"
+                                               {% if field.field.required %}required{% endif %}>
+                                    {% endif %}
+
+                                    {% if field.errors %}
+                                        <div class="invalid-feedback fw-semibold small d-block">
+                                            {{ field.errors|striptags }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                {% if field.help_text and field.name != 'slug' %}
+                                    <div class="form-text text-muted small mt-1" style="font-size: 0.75rem;">
+                                        {{ field.help_text|safe }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- BOTONES DE ACCIÓN AGRUPADOS (Guardar y Cancelar) -->
+                    <div class="d-flex flex-column flex-sm-row align-items-center justify-content-end gap-2 mt-5">
+                        <a href="{% url 'courses:manage_course_list' %}" class="btn btn-outline-secondary w-100 w-sm-auto px-4 py-2.5 rounded-3 fw-semibold order-2 order-sm-1">
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-emerald w-100 w-sm-auto px-4 py-2.5 rounded-3 d-flex align-items-center justify-content-center gap-2 fw-bold shadow-sm order-1 order-sm-2">
+                            <span>💾 Guardar Curso</span>
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- 🧠 ENGINE INTELIGENTE DE CONTROL DE CAMPOS Y AUTOGENERACIÓN DE SLUGS -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // 1. Estilizado automático de campos nativos de Django
+        const formFields = document.querySelectorAll('form input, form select, form textarea');
+        let titleInput = null;
+        let slugInput = null;
+
+        formFields.forEach(function(field) {
+            if (field.type !== 'hidden' && field.type !== 'submit') {
+                field.classList.add('form-control', 'rounded-3');
+                if (field.tagName === 'SELECT') {
+                    field.classList.remove('form-control');
+                    field.classList.add('form-select', 'py-2.5');
+                } else if (field.type !== 'checkbox' && field.type !== 'radio') {
+                    field.classList.add('py-2.5');
+                }
+            }
+
+            // Identificamos las referencias exactas de los inputs de título y slug
+            if (field.name === 'title') titleInput = field;
+            if (field.name === 'slug') slugInput = field;
+        });
+
+        // 2. Lógica del Generador de Slugs en Tiempo Real (Fricción Cero para el Profesor)
+        if (titleInput && slugInput) {
+            titleInput.addEventListener('input', function() {
+                let text = titleInput.value;
+
+                // Mapeo de limpieza de caracteres con acentos o diéresis en español
+                const from = "áéíóúüñÁÉÍÓÚÜÑ";
+                const to   = "aeiouunAEIOUUN";
+                for (let i = 0, l = from.length; i < l; i++) {
+                    text = text.replace(new RegExp(from.charAt(i), 'g'), to.charAt(i));
+                }
+
+                const slug = text
+                    .toLowerCase()                           // Todo a minúsculas
+                    .trim()                                  // Quita espacios extremos
+                    .replace(/[^a-z0-9 -]/g, '')            // Remueve caracteres especiales raros
+                    .replace(/\s+/g, '-')                    // Cambia espacios por guiones solo
+                    .replace(/-+/g, '-');                    // Evita guiones duplicados (ej: --)
+
+                slugInput.value = slug; // Inyecta el resultado de forma invisible en el input real
+            });
+        }
+    });
+</script>
 {% endblock %}

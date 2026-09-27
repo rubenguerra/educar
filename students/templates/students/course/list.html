@@ -1,41 +1,91 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
-{% block title %}Mis cursos{% endblock %}
+{% block title %}Mis Cursos - Aula Virtual{% endblock %}
 
 {% block content %}
-<h1>Mis cursos</h1>
+<style>
+    .bg-hueso { background-color: #F8F9FA; }
+    .text-slate { color: #0F172A; }
+    .text-emerald { color: #10B981 !important; }
+    .card-course {
+        border: 1px solid #E2E8F0;
+        border-radius: 14px;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card-course:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+        border-color: #10B981;
+    }
+</style>
 
-<div class="module">
-    <!-- Contenedor para organizar tus cursos (ideal si usas CSS Grid o Flexbox) -->
-    <div class="courses-grid">
-        {% for course in object_list %}
-            <div class="course-card">
-                <!-- Mostramos la materia como etiqueta informativa si lo deseas -->
-                <span class="badge">{{ course.subject.title }}</span>
+<div class="bg-hueso py-5 min-vh-100">
+    <div class="container">
 
-                <h3>{{ course.title }}</h3>
+        <!-- 🚀 ENCABEZADO DEL TABLERO DEL ALUMNO -->
+        <header class="mb-5 text-center text-lg-start d-lg-flex align-items-center justify-content-between gap-3">
+            <div>
+                <span class="text-emerald text-uppercase fw-bold small tracking-wider d-block mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Mi Panel de Estudio</span>
+                <h1 class="h2 fw-extrabold text-slate m-0">Mis Cursos Inscritos</h1>
+                <p class="text-muted small m-0 mt-1">Aquí tienes el mapa de las asignaturas que estás cursando actualmente.</p>
+            </div>
+            <div class="mt-3 mt-lg-0">
+                <a href="{% url 'course_list' %}" class="btn btn-outline-secondary px-4 py-2 rounded-3 fw-semibold btn-sm">
+                    🔍 Explorar Más Cursos
+                </a>
+            </div>
+        </header>
 
-                <!-- Añadimos el resumen truncado para no romper el diseño si es muy largo -->
-                <p class="overview">{{ course.overview|truncatewords:20 }}</p>
+        <!-- 🖥️ GRID DE CURSOS ACTIVOS -->
+        <!-- 1 columna en móvil, 2 en tablet, 3 en pantallas grandes -->
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for course in object_list %}
+                <div class="col">
+                    <article class="card h-100 card-course bg-white d-flex flex-column">
 
-                <!-- Aprovechamos el método 'with_modules_count' que creamos en el manager -->
-                <p class="modules-count">
-                    <small>📌 {{ course.modules_count }} módulo{{ course.modules_count|pluralize }} disponible{{ course.modules_count|pluralize }}</small>
-                </p>
+                        <div class="card-body p-4 d-flex flex-column h-100">
+                            <div class="mb-3">
+                                <!-- Materia / Categoría -->
+                                <span class="text-uppercase text-muted fw-bold d-block mb-1" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+                                    {{ course.subject.title }}
+                                </span>
 
-                <p>
-                    <a href="{% url 'students:student_course_detail' course.id %}" class="btn-access">
-                        Acceder a los contenidos
+                                <!-- Título del Curso -->
+                                <h3 class="h5 card-title fw-bold text-slate mb-2" style="line-height: 1.3; min-height: 2.6rem;">
+                                    {{ course.title }}
+                                </h3>
+
+                                <!-- Instructor / Profesor encargado -->
+                                <p class="card-text text-secondary small m-0">
+                                    Instructor: <strong class="text-dark">{{ course.owner.username }}</strong>
+                                </p>
+                            </div>
+
+                            <!-- Botón de reingreso al Viaje de Aprendizaje (Empujado automáticamente al fondo) -->
+                            <div class="mt-auto pt-4">
+                                <a href="{% url 'students:student_course_detail' course.id %}" class="btn btn-emerald w-100 py-2.5 rounded-3 d-flex align-items-center justify-content-center gap-2">
+                                    <span>Continuar Aprendizaje</span> ➔
+                                </a>
+                            </div>
+                        </div>
+
+                    </article>
+                </div>
+            {% empty %}
+                <!-- Estado vacío por si el alumno es nuevo y no se ha inscrito a nada -->
+                <div class="col-12 text-center py-5 border rounded-4 bg-white" style="border-color: #E2E8F0 !important;">
+                    <div class="display-3 mb-3">🎓</div>
+                    <h3 class="fw-extrabold text-slate mb-2">¡Tu aula está vacía!</h3>
+                    <p class="text-muted mx-auto mb-4" style="max-width: 360px; font-size: 0.95rem; line-height: 1.5;">
+                        Aún no te has inscrito a ninguna cátedra. Explora nuestro catálogo general y elige tu próximo desafío.
+                    </p>
+                    <a href="{% url 'course_list' %}" class="btn btn-emerald px-4 py-2.5 rounded-3 shadow-sm fw-bold">
+                        Ver Catálogo de Cursos
                     </a>
-                </p>
-            </div>
-        {% empty %}
-            <!-- Estado vacío amigable y claro -->
-            <div class="empty-state">
-                <p>No te has inscrito a ningún curso aún.</p>
-                <p>Explora nuestro catálogo de <a href="{% url 'course_list' %}">Cursos disponibles</a> para empezar a aprender hoy mismo.</p>
-            </div>
-        {% endfor %}
+                </div>
+            {% endfor %}
+        </div>
+
     </div>
 </div>
 {% endblock %}

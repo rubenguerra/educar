@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Resultados de la Evaluación - EDUCA{% endblock %}
+
+{% block content %}
+<style>
+    .bg-hueso { background-color: #F8F9FA; }
+    .text-slate { color: #0F172A; }
+    .text-emerald { color: #10B981 !important; }
+    .bg-emerald-light { background-color: #F0FDF4 !important; border-color: #A7F3D0 !important; color: #065F46 !important; }
+    .bg-rose-light { background-color: #FEF2F2 !important; border-color: #FCA5A5 !important; color: #991B1B !important; }
+    .card-result { border-radius: 16px; border: 1px solid #E2E8F0; background-color: #FFFFFF; }
+</style>
+
+<div class="bg-hueso py-5 min-vh-100">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-xl-9 col-lg-10">
+                
+                <!-- 🏆 1. TARJETA DE RESUMEN EJECUTIVO (Puntaje Global) -->
+                <div class="card border-0 shadow-sm p-4 p-md-5 text-center mb-4 {% if attempt.passed %}bg-emerald-light{% else %}bg-rose-light{% endif %}" style="border-radius: 20px; border: 1px solid !important;">
+                    <div class="mb-3">
+                        <span class="display-3 d-block">{% if attempt.passed %}🏆{% else %}📚{% endif %}</span>
+                    </div>
+                    
+                    <h1 class="fw-extrabold h2 mb-1">
+                        {% if attempt.passed %}¡Felicidades, has aprobado!{% else %}Sigue intentándolo, vas a lograrlo{% endif %}
+                    </h1>
+                    
+                    <p class="small opacity-75 mx-auto mb-4" style="max-width: 460px; line-height: 1.5;">
+                        Has completado el examen **"{{ attempt.quiz.title }}"**. Tu progreso y retroalimentación cognitiva han sido procesados.
+                    </p>
+
+                    <!-- Calificación Destacada en la Escala de 0.0 a 10.0 -->
+                    <div class="bg-white text-dark d-inline-block px-4 py-3 rounded-4 shadow-sm border border-light">
+                        <span class="d-block text-uppercase text-muted fw-bold small mb-1" style="font-size: 0.65rem; letter-spacing: 0.5px;">Tu Calificación</span>
+                        <span class="display-5 text-slate fw-bold" style="color: #0F172A !important;">{{ attempt.score|floatformat:1 }}</span>
+                        <span class="text-secondary fw-semibold">/ 10.0</span>
+                    </div>
+
+                    <div class="mt-4 small fw-medium opacity-75">
+                        🎯 Puntaje mínimo requerido para aprobar: <strong>{{ attempt.quiz.passing_score }}%</strong> 
+                        • 🔢 Respuestas correctas: <strong>{{ attempt.correct_answers }} de {{ attempt.total_questions }}</strong>
+                    </div>
+                </div>
+
+                <!-- 📋 2. RECORRIDO DETALLADO DE PREGUNTAS EN BASE A TU MODELO QUIZATTEMPTANSWER -->
+                <h2 class="h5 fw-bold text-slate mb-4 mt-5">🔍 Revisión Detallada de Reactivos</h2>
+                
+                <div class="d-flex flex-column gap-3">
+                    {% for answer in answers %}
+                        <!-- Evaluamos si la respuesta guardada por el alumno es la correcta de la pregunta -->
+                        <article class="card-result p-4 shadow-sm border {% if answer.selected_choice.is_correct %}border-success-subtle{% else %}border-danger-subtle{% endif %}">
+                            
+                            <!-- Enunciado de la Pregunta -->
+                            <div class="d-flex align-items-start gap-3 mb-3">
+                                <span class="badge {% if answer.selected_choice.is_correct %}bg-success text-white{% else %}bg-danger text-white{% endif %} px-2.5 py-1.5 rounded-2 small fw-bold">
+                                    {% if answer.selected_choice.is_correct %}✓ Correcta{% else %}✗ Incorrecta{% endif %}
+                                </span>
+                                <h3 class="h6 fw-bold text-slate m-0 pt-0.5" style="line-height: 1.4; color: #0F172A !important;">
+                                    Pregunta {{ forloop.counter }}: {{ answer.question.text }}
+                                </h3>
+                            </div>
+
+                            <!-- Listado de Opciones Choice del Examen con cruce inteligente de estados -->
+                            <div class="row row-cols-1 row-cols-md-2 g-2 mt-2">
+                                {% for choice in answer.question.choices.all %}
+                                    <div class="col">
+                                        <div class="p-3 rounded-3 border small fw-medium d-flex align-items-center justify-content-between
+                                            {% if choice.is_correct %}
+                                                bg-success-subtle text-success border-success fw-bold
+                                            {% elif choice.id == answer.selected_choice.id and not choice.is_correct %}
+                                                bg-danger-subtle text-danger border-danger
+                                            {% else %}
+                                                bg-light text-secondary border-light-subtle
+                                            {% endif %}" style="font-size: 0.88rem;">
+                                            
+                                            <span class="pe-2">{{ choice.text }}</span>
+                                            
+                                            <span class="fs-6">
+                                                {% if choice.is_correct %}
+                                                    🟢 <small class="text-uppercase tracking-wider fw-bold text-success ms-1" style="font-size: 0.6rem;">Solución</small>
+                                                {% elif choice.id == answer.selected_choice.id and not choice.is_correct %}
+                                                    🔴 <small class="text-uppercase tracking-wider fw-bold text-danger ms-1" style="font-size: 0.6rem;">Tu selección</small>
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                        </article>
+                    {% endfor %}
+                </div>
+
+                <!-- 🎛️ 3. BOTÓN DE REGRESO SEGURO AL VIAJE -->
+                <div class="d-flex flex-column flex-sm-row align-items-center justify-content-center gap-2 mt-5">
+                    <a href="{% url 'students:student_course_detail' course.id %}" class="btn btn-emerald px-5 py-2.5 rounded-3 fw-bold shadow-sm w-100 w-sm-auto text-decoration-none text-center">
+                        ➔ Volver a mi Ruta de Aprendizaje
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

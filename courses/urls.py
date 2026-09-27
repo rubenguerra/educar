@@ -19,5 +19,11 @@ urlpatterns = [
     path('content/<int:order>/', views.ContentOrderView.as_view(), name='content_order'),
     path('tema/<slug:subject>/', views.CourseListView.as_view(), name='course_list_subject'),
     path('<slug:slug>/', views.CourseDetailView.as_view(), name='course_detail'),
-    path('<int:course_id>/analytics/', views.generate_course_ai_analytics, name='course_ai_analytics'),
+    path('<int:course_id>/analisis/', views.generate_course_ai_analytics, name='course_ai_analytics'),
+
+    path('quiz/<int:quiz_id>/preguntas/', views.QuizQuestionListView.as_view(), name='quiz_question_list'),
+    path('quiz/<int:quiz_id>/pregunta/agregar/', views.QuizQuestionCreateUpdateView.as_view(),
+         name='quiz_question_create'),
+    path('quiz/<int:quiz_id>/pregunta/<int:id>/editar/', views.QuizQuestionCreateUpdateView.as_view(),
+         name='quiz_question_update'),
 ]

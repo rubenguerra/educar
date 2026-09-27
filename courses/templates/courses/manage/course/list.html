@@ -1,45 +1,110 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
-{% block title %}Mis cursos{% endblock %}
+{% block title %}Panel de Control Docente - EDUCA{% endblock %}
 
 {% block content %}
-<h1>Mis cursos</h1>
+<style>
+    .bg-hueso { background-color: #F8F9FA; }
+    .text-slate { color: #0F172A; }
+    .text-emerald { color: #10B981 !important; }
+    .btn-emerald { background-color: #10B981; color: white; border: none; font-weight: 600; }
+    .btn-emerald:hover { background-color: #059669; color: white; }
+    .course-admin-card {
+        border: 1px solid #E2E8F0;
+        border-radius: 12px;
+        background-color: #FFFFFF;
+        transition: box-shadow 0.2s;
+    }
+    .course-admin-card:hover {
+        box-shadow: 0 8px 16px rgba(15, 23, 42, 0.04);
+    }
+</style>
 
-<div class="module">
-    {% for course in object_list %}
-    <div class="course-info">
-        <h3>{{ course.title }}</h3>
-        <p>
-            <a href="{% url 'courses:course_edit' course.id %}">Editar</a>
-            <a href="{% url 'courses:course_delete' course.id %}">Eliminar</a>
-            <a href="{% url 'courses:course_module_update' course.id %}">Editar módulos</a>
-            {% if course.modules.count > 0 %}
-            <a href="{% url 'courses:module_content_list' course.modules.first.id %}">Administrar contenidos</a>
-            {% endif %}
-            <a href="{% url 'courses:course_ai_analytics' course.id %}" style="background-color: #f8f9fa; color: #0056b3;
-                border: 1px solid #0056b3; text-decoration: none; padding: 6px 12px; font-size: 0.85rem;
-                font-weight: bold; border-radius: 4px; display: inline-flex; align-items: center;
-                gap: 6px; transition: all 0.2s;"
-                onmouseover="this.style.backgroundColor='#0056b3'; this.style.color='white';"
-                onmouseout="this.style.backgroundColor='#f8f9fa'; this.style.color='#0056b3';">
-                <span>📊</span> Diagnóstico de IA
-            </a>
+<div class="bg-hueso py-5 min-vh-100">
+    <div class="container">
 
-        </p>
+        <!-- 🚀 ENCABEZADO DEL DASHBOARD DOCENTE -->
+        <header class="mb-5 text-center text-sm-start d-sm-flex align-items-center justify-content-between gap-3">
+            <div>
+                <span class="text-emerald text-uppercase fw-bold small tracking-wider d-block mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Panel de Administración</span>
+                <h1 class="h2 fw-extrabold text-slate m-0">Mis Asignaturas Dictadas</h1>
+                <p class="text-muted small m-0 mt-1">Crea, edita y gestiona los contenidos multimedia y evaluaciones de tus cátedras.</p>
+            </div>
+            <div class="mt-3 mt-sm-0">
+                <!-- Enlace dinámico para crear cursos (Asegura el namespace courses:) -->
+                <a href="{% url 'courses:course_create' %}" class="btn btn-emerald px-4 py-2.5 rounded-3 shadow-sm d-flex align-items-center gap-2 fw-bold btn-sm">
+                    <span>➕</span> Crear Nuevo Curso
+                </a>
+            </div>
+        </header>
 
-        <!--<div class="course-actions" style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px;">-->
+        <!-- 🖥️ LISTADO DE CURSOS EN FILAS MODERNAS -->
+        <div class="d-flex flex-column gap-3">
+            {% for course in object_list %}
+                <article class="course-admin-card p-4 shadow-sm">
+                    <div class="row align-items-center g-3">
 
-    <!-- ... Para revisar Tus otros botones como 'Editar', 'Módulos', etc. ... -->
+                        <!-- 📖 DETALLES DEL CURSO (Columna Principal) -->
+                        <div class="col-lg-5 col-md-6">
+                            <span class="text-uppercase text-muted fw-bold d-block mb-1" style="font-size: 0.65rem; letter-spacing: 0.5px;">
+                                {{ course.subject.title }}
+                            </span>
+                            <h3 class="h5 fw-bold text-slate m-0 mb-2">{{ course.title }}</h3>
+                            <div class="d-flex align-items-center gap-3 text-secondary small">
+                                <span>📅 Creado: <strong>{{ course.created|date:"d M, Y" }}</strong></span>
+                                <span>•</span>
+                                <span>📦 <strong>{{ course.modules.count }}</strong> Módulos activos</span>
+                            </div>
+                        </div>
 
-    <!-- NUEVO BOTÓN DE ENLACE DIRECTO A ANALÍTICAS DE IA -->
 
+                        <!-- 🎛️ ACCIONES Y HERRAMIENTAS DE GESTIÓN DE EXTREMO DERECHO -->
+                        <div class="col-lg-7 col-md-6 d-flex flex-wrap justify-content-start justify-content-md-end gap-2">
+
+                            <!-- Botón Estructural: Gestionar Módulos y Contenidos -->
+                            <a href="{% url 'courses:course_module_update' course.id %}" class="btn btn-outline-dark btn-sm px-3 py-2 rounded-2 fw-semibold d-flex align-items-center gap-1">
+                                ⚙️ <span>Editar Módulos</span>
+                            </a>
+
+                            {% if course.modules.count > 0 %}
+                                <a href="{% url 'courses:module_content_list' course.modules.first.id %}" class="btn btn-emerald btn-sm px-3 py-2 rounded-2 d-flex align-items-center gap-1 shadow-sm">
+                                    🚀 <span>Administrar Contenidos</span>
+                                </a>
+                            {% endif %}
+
+                            <!-- Botón Estructural: Editar Metadatos -->
+                            <a href="{% url 'courses:course_edit' course.id %}" class="btn btn-outline-secondary btn-sm px-3 py-2 rounded-2 fw-semibold d-flex align-items-center gap-1">
+                                ✏️ <span>Editar</span>
+                            </a>
+
+                            <!-- Botón Estructural: Eliminar Asignatura (Color Rojo preventivo de UX) -->
+                            <a href="{% url 'courses:course_delete' course.id %}" class="btn btn-outline-danger btn-sm px-3 py-2 rounded-2 fw-semibold d-flex align-items-center gap-1">
+                                🗑️ <span>Eliminar</span>
+                            </a>
+
+                            <a href="{% url 'courses:course_ai_analytics' course.id %}" class="btn btn-outline-dark btn-sm px-3 py-2 rounded-2 fw-semibold d-flex align-items-center gap-1 bg-light" style="border-color: #CBD5E1 !important;">
+                                📊 <span>Auditoría de IA</span>
+                            </a>
+
+                        </div>
+
+                    </div>
+                </article>
+            {% empty %}
+                <!-- Estado vacío por si el profesor no tiene ninguna cátedra asignada -->
+                <div class="text-center py-5 border rounded-4 bg-white" style="border-color: #E2E8F0 !important;">
+                    <div class="display-3 mb-3">👨‍🏫</div>
+                    <h3 class="fw-extrabold text-slate mb-2">¡Aún no dictas ningún curso!</h3>
+                    <p class="text-muted mx-auto mb-4" style="max-width: 380px; font-size: 0.95rem; line-height: 1.5;">
+                        Comienza a compartir tu conocimiento con la comunidad virtual creando tu primer programa de estudios inteligente en segundos.
+                    </p>
+                    <a href="{% url 'courses:course_create' %}" class="btn btn-emerald px-4 py-2.5 rounded-3 shadow-sm fw-bold">
+                        Crear Mi Primer Curso
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
 
     </div>
-    {% empty %}
-    <p>Aún no tienes ningún curso.</p>
-    {% endfor %}
-    <p>
-        <a href="{% url 'courses:course_create' %}" class="button">Crear nuevo curso</a>
-    </p>
 </div>
 {% endblock %}

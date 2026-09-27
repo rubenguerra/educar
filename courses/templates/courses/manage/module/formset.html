@@ -1,18 +1,144 @@
 {% extends 'base.html' %}
 
 {% block title %}
-Edit "{{ course.title }}"
+    Administrar Módulos: "{{ course.title }}" - EDUCA
 {% endblock %}
 
 {% block content %}
-<h1>Edit "{{ course.title }}"</h1>
-<div class="module">
-    <h2>Course modules</h2>
-    <form action="" method="post">
-        {{ formset }}
-        {{ formset.management_form }}
-        {% csrf_token %}
-        <input type="submit" value="Guardar módulo">
-    </form>
+<style>
+    .bg-hueso { background-color: #F8F9FA; }
+    .text-slate { color: #0F172A; }
+    .text-emerald { color: #10B981 !important; }
+    .btn-emerald { background-color: #10B981; color: white; border: none; font-weight: 600; }
+    .btn-emerald:hover { background-color: #059669; color: white; }
+
+    /* Estilo de tarjeta modular del Formset */
+    .formset-module-card {
+        background-color: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 14px;
+        transition: box-shadow 0.2s;
+    }
+    .formset-module-card:hover {
+        box-shadow: 0 8px 16px rgba(15, 23, 42, 0.04);
+    }
+</style>
+
+<div class="bg-hueso py-5 min-vh-100">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-9 col-xl-8">
+
+                <!-- 🚀 ENCABEZADO DE NAVEGACIÓN Y UX -->
+                <header class="mb-5 d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 bg-white p-4 rounded-4 shadow-sm border" style="border-color: #E2E8F0 !important;">
+                    <div>
+                        <span class="text-emerald text-uppercase fw-bold small tracking-wider d-block mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Estructura Académica</span>
+                        <h1 class="h3 fw-extrabold text-slate m-0">Administrar Módulos</h1>
+                        <p class="text-muted small m-0 mt-1">Curso: <strong>{{ course.title }}</strong></p>
+                    </div>
+                    <div>
+                        <!-- Regreso seguro al organizador multimedia -->
+                        <a href="{% url 'courses:manage_course_list' %}" class="btn btn-outline-secondary px-3 py-2 rounded-3 fw-semibold btn-sm">
+                            🎛️ Panel de Cursos
+                        </a>
+                    </div>
+                </header>
+
+                <!-- 📑 FORMULARIO DE FORMSET MÚLTIPLE -->
+                <form action="" method="post" id="modules-formset-wrapper" novalidate>
+                    {% csrf_token %}
+
+                    <!-- Token obligatorio de control de Django para procesar formularios múltiples -->
+                    {{ formset.management_form }}
+
+                    <div class="d-flex flex-column gap-4" id="formset-container">
+                        {% for form in formset %}
+                            <article class="formset-module-card p-4 shadow-sm position-relative">
+
+                                <!-- Indicador del número de módulo dinámico -->
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <span class="badge bg-light text-secondary border px-3 py-2 rounded-3 small fw-bold">
+                                        📦 Formulario de Módulo
+                                    </span>
+
+                                    <!-- Si el formulario ya existe en la BD, Django oculta el ID del registro aquí -->
+                                    {% for hidden in form.hidden_fields %}
+                                        {{ hidden }}
+                                    {% endfor %}
+                                </div>
+
+                                <!-- Renderizado de campos con espaciado UX -->
+                                <div class="row g-3">
+                                    {% for field in form.visible_fields %}
+                                        <!-- Manejo especial para el campo DELETE nativo de Django Formsets -->
+                                        {% if field.name == 'DELETE' %}
+                                            <div class="col-12 mt-3 p-3 bg-light-subtle border border-danger-subtle rounded-3 d-flex align-items-center gap-2">
+                                                <div class="form-check m-0">
+                                                    {{ field }}
+                                                    <label class="form-check-label small fw-bold text-danger ms-1" for="{{ field.id_for_label }}">
+                                                        🗑️ Marcar este módulo para eliminar al guardar
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <!-- Campos estándar como título y descripción -->
+                                            <div class="col-12">
+                                                <label for="{{ field.id_for_label }}" class="form-label small fw-bold text-secondary mb-1">
+                                                    {{ field.label }}
+                                                </label>
+                                                {{ field }}
+
+                                                {% if field.errors %}
+                                                    <div class="invalid-feedback d-block fw-semibold small mt-1">
+                                                        {{ field.errors|striptags }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+
+                    <!-- 💾 BOTONES DE ACCIÓN COMPACTOS -->
+                    <div class="d-flex flex-column flex-sm-row align-items-center justify-content-end gap-2 mt-5">
+                        <a href="{% url 'courses:manage_course_list' %}" class="btn btn-outline-secondary w-100 w-sm-auto px-4 py-2.5 rounded-3 fw-semibold order-2 origin-sm-1">
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-emerald w-100 w-sm-auto px-4 py-2.5 rounded-3 d-flex align-items-center justify-content-center gap-2 fw-bold shadow-sm order-1 order-sm-2">
+                            <span>💾 Guardar Módulos</span>
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- 🧠 SCRIPT COMPLEMENTARIO DE UX: Estiliza los campos planos que genera el Formset dinámicamente -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const formsetContainer = document.getElementById('formset-container');
+        // Buscamos todas las cajas de texto y textareas generadas por el formset
+        const textFields = formsetContainer.querySelectorAll('input[type="text"], textarea');
+        const checkFields = formsetContainer.querySelectorAll('input[type="checkbox"]');
+
+        textFields.forEach(function(field) {
+            field.classList.add('form-control', 'rounded-3', 'py-2.5');
+        });
+
+        checkFields.forEach(function(field) {
+            field.classList.add('form-check-input');
+            // Si es el checkbox de eliminación, le añadimos borde rojo de alerta
+            if (field.name.card-timeline !== -1 && field.name.includes('DELETE')) {
+                field.classList.add('border-danger');
+            }
+        });
+    });
+</script>
 {% endblock %}

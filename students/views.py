@@ -117,7 +117,7 @@ class StudentCourseDetailView(LoginRequiredMixin, DetailView):
 def student_submit_quiz(request, quiz_id):
     """
     Procesa el envío de un examen por parte del estudiante,
-    calcula la nota y registra el progreso/calificación.
+    calcula la nota y registra el progreso/calificación de forma limpia.
     """
     if request.method != 'POST':
         return redirect('students:student_course_list')
@@ -136,21 +136,19 @@ def student_submit_quiz(request, quiz_id):
 
     hace_24_horas = timezone.now() - timedelta(days=1)
 
-    # contamos los intentos en el día
+    # Contamos los intentos reales en las últimas 24 horas
     intentos_recientes = QuizAttempt.objects.filter(student=request.user,
                                                     quiz=quiz,
                                                     taken_at__gte=hace_24_horas).count()
 
     if intentos_recientes >= 3:
         primer_intento_ventana = (QuizAttempt.objects.filter(student=request.user,
-                                                            quiz=quiz,
-                                                            taken_at__gte=hace_24_horas)
+                                                             quiz=quiz,
+                                                             taken_at__gte=hace_24_horas)
                                   .order_by('taken_at').first())
 
         hora_desbloqueo = primer_intento_ventana.taken_at + timedelta(days=1)
-
         diferencia = hora_desbloqueo - timezone.now()
-
         segundos_totales = diferencia.total_seconds()
 
         if segundos_totales > 0:
@@ -162,21 +160,22 @@ def student_submit_quiz(request, quiz_id):
 
         messages.error(request,
                        f"🔒 Has agotado tus 3 intentos permitidos para este examen. "
-                       f"Podrás intentarlo de nuevo en {horas} horas y {minutos} minutos."
+                       f"Podrás intentarlo de nuevo en {horas} horas y {minutos} minutos. "
                        f"¡Aprovecha para repasar el material!"
                        )
-        return redirect ('students:student_course_detail', course.id if course else quiz.id)
+        return redirect('students:student_course_detail', course.id if course else quiz.id)
 
     questions = quiz.questions.prefetch_related('choices')
     total_questions = questions.count()
 
     if total_questions == 0:
         messages.error(request, "Este examen no tiene preguntas configuradas.")
-        return redirect('students:student_course_detail', quiz.module.course.id)
+        return redirect('students:student_course_detail', course.id)
 
     correct_answers_count = 0
     answers_to_create = []
 
+    # 1. Instanciamos el intento único de forma segura
     attempt = QuizAttempt(student=request.user,
                           quiz=quiz,
                           total_questions=total_questions,
@@ -201,46 +200,24 @@ def student_submit_quiz(request, quiz_id):
             selected_choice=selected_choice
         ))
 
+    # 2. Realizamos los cálculos matemáticos de la nota
     score = round((correct_answers_count / total_questions) * 10.0, 2)
     percentage = round((correct_answers_count / total_questions) * 100, 1)
-    is_passed = percentage >= 60.0
+    is_passed = percentage >= quiz.passing_score
 
+    # 3. Guardamos el intento UNA SOLA VEZ (Corrección del Bug de duplicación)
     attempt.score = score
     attempt.correct_answers = correct_answers_count
     attempt.passed = is_passed
     attempt.save()
 
+    # 4. Guardamos en lote las respuestas marcadas por el estudiante
     for answer in answers_to_create:
         answer.attempt_id = attempt.id
     QuizAttemptAnswer.objects.bulk_create(answers_to_create)
 
-    quiz_type = ContentType.objects.get_for_model(quiz)
-    content_object = Content.objects.filter(content_type=quiz_type,
-                                            object_id=quiz.id).first()
-    if content_object:
-        course = content_object.module.course
-    else:
-        messages.error(request, "Este examen no está vinculado a ningún módulo activo.")
-        return redirect('students:student_course_list')
-
+    # 5. Registramos el progreso académico en StudentProgress si aprobó
     progress, _ = StudentProgress.objects.get_or_create(student=request.user, course=course)
-
-    if is_passed and content_object:
-        progress.completed_contents.add(content_object)
-
-    QuizAttempt.objects.create(student=request.user,
-                               quiz=quiz,
-                               score=score,
-                               correct_answers = correct_answers_count,
-                               total_questions=total_questions,
-                               passed=is_passed)
-
-    progress, created = StudentProgress.objects.get_or_create(
-        student=request.user,
-        course=course
-    )
-
-    # Resultado
     if is_passed and content_object:
         progress.completed_contents.add(content_object)
 
@@ -249,10 +226,13 @@ def student_submit_quiz(request, quiz_id):
 
 @login_required
 def quiz_attempt_detail(request, attempt_id):
+    """Recupera el intento y precarga las respuestas para alimentar el feedback visual."""
     attempt = get_object_or_404(QuizAttempt, id=attempt_id, student=request.user)
-    answers = attempt.answers.select_related('question',
-                                             'selected_choice').prefetch_related('question_choices')
-    return render(request, 'students/quiz/attempt_detail.html',{
+
+    # Usamos select_related para evitar el problema de consultas N+1 en la BD
+    answers = attempt.answers.select_related('question', 'selected_choice').prefetch_related('question__choices')
+
+    return render(request, 'students/quiz/attempt_detail.html', {
         'attempt': attempt,
         'answers': answers,
         'course': attempt.quiz.module.course

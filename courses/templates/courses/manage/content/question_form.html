@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if object %}Editar Pregunta{% else %}Crear Nueva Pregunta{% endif %} - EDUCA
+{% endblock %}
+
+{% block content %}
+<style>
+    .bg-hueso { background-color: #F8F9FA; }
+    .text-slate { color: #0F172A; }
+    .text-emerald { color: #10B981 !important; }
+    .btn-emerald { background-color: #10B981; color: white; border: none; font-weight: 600; }
+    .btn-emerald:hover { background-color: #059669; color: white; }
+    
+    /* Caja de alerta sutil para las opciones del formset anidado */
+    .option-form-card {
+        background-color: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 12px;
+        transition: box-shadow 0.2s;
+    }
+    .option-form-card:hover {
+        box-shadow: 0 6px 12px rgba(15, 23, 42, 0.03);
+    }
+</style>
+
+<div class="bg-hueso py-5 min-vh-100">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-xl-9 col-lg-10">
+                
+                <!-- 🚀 ENCABEZADO DE NAVEGACIÓN Y UX -->
+                <header class="mb-5 d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 bg-white p-4 rounded-4 shadow-sm border" style="border-color: #E2E8F0 !important;">
+                    <div>
+                        <span class="text-emerald text-uppercase fw-bold small tracking-wider d-block mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Diseño de Evaluaciones</span>
+                        <h1 class="h3 fw-extrabold text-slate m-0">
+                            {% if object %}Editar Pregunta{% else %}Configurar Nueva Pregunta{% endif %}
+                        </h1>
+                        <p class="text-muted small m-0 mt-1">Quiz: <strong>{{ quiz.title|default:"Evaluación Modular" }}</strong></p>
+                    </div>
+                    <div>
+                        <!-- Regreso seguro mediante el historial del navegador -->
+                        <a href="javascript:history.back()" class="btn btn-outline-secondary px-3 py-2 rounded-3 fw-semibold btn-sm">
+                            🎛️ Volver al Quiz
+                        </a>
+                    </div>
+                </header>
+
+                <!-- 📝 FORMULARIO DE CREACIÓN DE PREGUNTA Y OPCIONES -->
+                <form action="." method="post" id="question-builder-form" novalidate>
+                    {% csrf_token %}
+                    
+                    <div class="row g-4">
+                        
+                        <!-- COLUMNA: ENUNCIADO DE LA PREGUNTA PRINCIPAL (60% del ancho en pantallas grandes) -->
+                        <div class="col-md-7 col-lg-8">
+                            <div class="bg-white p-4 p-md-5 rounded-4 shadow-sm border h-100" style="border-color: #E2E8F0 !important;">
+                                <h2 class="h5 fw-bold text-slate mb-4">💬 Enunciado de la Pregunta</h2>
+                                
+                                <div class="d-flex flex-column gap-4">
+                                    {% for field in form %}
+                                        <div class="form-group">
+                                            <label for="{{ field.id_for_label }}" class="form-label small fw-bold text-secondary mb-1">
+                                                {{ field.label }}
+                                            </label>
+                                            <div class="input-group">
+                                                {{ field }}
+                                                {% if field.errors %}
+                                                    <div class="invalid-feedback d-block fw-semibold small mt-1">
+                                                        {{ field.errors|striptags }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            {% if field.help_text %}
+                                                <div class="form-text text-muted small mt-1" style="font-size: 0.75rem;">
+                                                    {{ field.help_text|safe }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- COLUMNA RECUADRO AUXILIAR: TIPS DE UX DOCENTE (40% del ancho) -->
+                        <div class="col-md-5 col-lg-4">
+                            <div class="bg-white p-4 rounded-4 shadow-sm border h-100" style="border-color: #E2E8F0 !important; background-color: #F8F9FA !important;">
+                                <div class="text-center p-3 rounded-3 mb-4 bg-white border">
+                                    <span class="display-6 d-block mb-1">🎯</span>
+                                    <h3 class="h6 fw-bold text-slate m-0">Evaluación Formativa</h3>
+                                </div>
+                                <p class="text-secondary small mb-0" style="line-height: 1.5;">
+                                    Redacta enunciados claros y directos. Una buena pregunta evalúa la comprensión real del estudiante del módulo y mitiga la memorización mecánica superficial.
+                                </p>
+                                <hr class="my-4" style="color: #E2E8F0;">
+                                <div class="small text-muted">
+                                    💡 <strong>Tip de UX:</strong> Asegúrate de marcar al menos una de las opciones de la derecha como la respuesta correcta para que el sistema pueda calificar los intentos automáticamente.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECCIÓN COMPLETA DE OPCIONES DE RESPUESTA (Formset Anidado) -->
+                        {% if answer_formset %}
+                            <div class="col-12 mt-4">
+                                <div class="bg-white p-4 p-md-5 rounded-4 shadow-sm border" style="border-color: #E2E8F0 !important;">
+                                    <div class="mb-4">
+                                        <h2 class="h5 fw-bold text-slate m-0">📋 Opciones de Respuesta Múltiple</h2>
+                                        <small class="text-muted">Introduce las alternativas y define cuál es la solución correcta</small>
+                                    </div>
+
+                                    <!-- Gestión del token de control obligatorio para el Formset de Opciones -->
+                                    {{ answer_formset.management_form }}
+
+                                    <div class="row row-cols-1 row-cols-md-2 g-3" id="answer-formset-container">
+                                        {% for answer_form in answer_formset %}
+                                            <div class="col">
+                                                <div class="option-form-card p-4 shadow-sm h-100">
+                                                    <span class="badge bg-light text-secondary border px-2 py-1 rounded-2 small fw-bold mb-3">
+                                                        Opción {{ forloop.counter }}
+                                                    </span>
+                                                    
+                                                    <!-- Ocultamos las llaves primarias ocultas si el formulario ya existe -->
+                                                    {% for hidden in answer_form.hidden_fields %}
+                                                        {{ hidden }}
+                                                    {% endfor %}
+
+                                                    <div class="d-flex flex-column gap-3">
+                                                        {% for field in answer_form.visible_fields %}
+                                                            <!-- Tratamiento especial de UX para el booleano 'is_correct' -->
+                                                            {% if 'correct' in field.name|lower or field.field.widget.input_type == 'checkbox' %}
+                                                                <div class="p-2.5 rounded-3 border bg-light d-flex align-items-center gap-2 mt-2" style="border-color: #CBD5E1 !important;">
+                                                                    <div class="form-check m-0 d-flex align-items-center gap-2">
+                                                                        {{ field }}
+                                                                        <label class="form-check-label small fw-bold text-success m-0" for="{{ field.id_for_label }}">
+                                                                            ✔ Es la respuesta correcta
+                                                                        </label>
+                                                                    </div>
+                                                                </div>
+                                                            {% else %}
+                                                                <!-- Campo estándar para el texto de la alternativa -->
+                                                                <div>
+                                                                    <label for="{{ field.id_for_label }}" class="form-label small fw-bold text-secondary mb-1">
+                                                                        {{ field.label }}
+                                                                    </label>
+                                                                    {{ field }}
+                                                                </div>
+                                                            {% endif %}
+                                                            {% if field.errors %}
+                                                                {{ field.errors|striptags }}
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+
+

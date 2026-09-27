@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if object %}Editar Pregunta{% else %}Crear Nueva Pregunta{% endif %} - EDUCA
+{% endblock %}
+
+{% block content %}
+<style>
+    .bg-hueso { background-color: #F8F9FA; }
+    .text-slate { color: #0F172A; }
+    .text-emerald { color: #10B981 !important; }
+    .btn-emerald { background-color: #10B981; color: white; border: none; font-weight: 600; }
+    .btn-emerald:hover { background-color: #059669; color: white; }
+    
+    /* Tarjeta individual para cada alternativa de opción Choice */
+    .option-form-card {
+        background-color: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 12px;
+        transition: box-shadow 0.2s, border-color 0.2s;
+    }
+    .option-form-card:hover {
+        border-color: #CBD5E1;
+        box-shadow: 0 6px 12px rgba(15, 23, 42, 0.03);
+    }
+</style>
+
+<div class="bg-hueso py-5 min-vh-100">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-xl-9 col-lg-10">
+                
+                <!-- 🚀 ENCABEZADO DE NAVEGACIÓN Y CONTEXTO DOCENTE -->
+                <header class="mb-5 d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 bg-white p-4 rounded-4 shadow-sm border" style="border-color: #E2E8F0 !important;">
+                    <div>
+                        <span class="text-emerald text-uppercase fw-bold small tracking-wider d-block mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Diseño de Evaluaciones</span>
+                        <h1 class="h3 fw-extrabold text-slate m-0">
+                            {% if object %}Editar Pregunta{% else %}Configurar Nueva Pregunta{% endif %}
+                        </h1>
+                        <p class="text-muted small m-0 mt-1">Quiz: <strong>{{ quiz.title }}</strong></p>
+                    </div>
+                    <div>
+                        <a href="{% url 'courses:quiz_question_list' quiz.id %}" class="btn btn-outline-secondary px-3 py-2 rounded-3 fw-semibold btn-sm">
+                            🎛️ Volver al Listado
+                        </a>
+                    </div>
+                </header>
+
+                <!-- 📝 FORMULARIO ÚNICO: Envuelve la Pregunta + las Opciones Choice -->
+                <form action="." method="post" id="question-builder-form" novalidate>
+                    {% csrf_token %}
+
+                    <div class="row g-4">
+
+                        <!-- SECCIÓN CENTRAL IZQUIERDA: ENUNCIADO DE LA PREGUNTA -->
+                        <div class="col-md-7 col-lg-8">
+                            <div class="bg-white p-4 p-md-5 rounded-4 shadow-sm border h-100" style="border-color: #E2E8F0 !important;">
+                                <h2 class="h5 fw-bold text-slate mb-4">💬 Enunciado de la Pregunta</h2>
+
+                                <div class="d-flex flex-column gap-4">
+                                    {% for field in form %}
+                                        <div class="form-group">
+                                            <label for="{{ field.id_for_label }}" class="form-label small fw-bold text-secondary mb-1">
+                                                {{ field.label }}
+                                            </label>
+                                            <div class="input-group">
+                                                {{ field }}
+                                                {% if field.errors %}
+                                                    <div class="invalid-feedback d-block fw-semibold small mt-1">
+                                                        {{ field.errors|striptags }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            {% if field.help_text %}
+                                                <div class="form-text text-muted small mt-1" style="font-size: 0.75rem;">
+                                                    {{ field.help_text|safe }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PANEL DERECHO: GUÍA DE UX PEDAGÓGICA -->
+                        <div class="col-md-5 col-lg-4">
+                            <div class="bg-white p-4 rounded-4 shadow-sm border h-100" style="border-color: #E2E8F0 !important; background-color: #F8F9FA !important;">
+                                <div class="text-center p-3 rounded-3 mb-4 bg-white border">
+                                    <span class="display-6 d-block mb-1">🎯</span>
+                                    <h3 class="h6 fw-bold text-slate m-0">Evaluación Formativa</h3>
+                                </div>
+                                <p class="text-secondary small mb-0" style="line-height: 1.5;">
+                                    Plantea enunciados claros y precisos. Una buena evaluación mide la capacidad de análisis y comprensión conceptual del módulo académico.
+                                </p>
+                                <hr class="my-4" style="color: #E2E8F0;">
+                                <div class="small text-muted" style="line-height: 1.4;">
+                                    💡 <strong>Tip de UX:</strong> Asegúrate de marcar la casilla de la respuesta correcta. El sistema la usará para calificar dinámicamente los intentos del alumno [shopping].
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 📋 BLOQUE DE OPCIONES DE RESPUESTA (Formset Choice Anidado) -->
+                        {% if formset %}
+                            <div class="col-12 mt-4">
+                                <div class="bg-white p-4 p-md-5 rounded-4 shadow-sm border" style="border-color: #E2E8F0 !important;">
+                                    <div class="mb-4">
+                                        <h2 class="h5 fw-bold text-slate m-0">📋 Opciones de Respuesta Múltiple (Choices)</h2>
+                                        <small class="text-muted">Introduce las alternativas de texto y define la solución válida</small>
+                                    </div>
+
+                                    <!-- Token obligatorio del Formset para Choices múltiples -->
+                                    {{ formset.management_form }}
+
+                                    <div class="row row-cols-1 row-cols-md-2 g-3" id="answer-formset-container">
+                                        {% for answer_form in formset %}
+                                            <div class="col">
+                                                <div class="option-form-card p-4 shadow-sm h-100">
+                                                    <div class="d-flex align-items-center justify-content-between mb-3">
+                                                        <span class="badge bg-light text-secondary border px-2 py-1 rounded-2 small fw-bold">
+                                                            Alternativa {{ forloop.counter }}
+                                                        </span>
+
+                                                        <!-- Inputs ocultos obligatorios de control (ID y llaves) -->
+                                                        {% for hidden in answer_form.hidden_fields %}
+                                                            {{ hidden }}
+                                                        {% endfor %}
+                                                    </div>
+
+                                                    <div class="d-flex flex-column gap-3">
+                                                        <!-- 🛠️ ELIMINACIÓN DE DUPLICADOS: Evaluamos cada campo de forma selectiva con un else explícito -->
+                                                        {% for field in answer_form.visible_fields %}
+                                                            {% if 'correct' in field.name|lower or field.field.widget.input_type == 'checkbox' %}
+                                                                <!-- Campo Checkbox Estilizado para la opción correcta -->
+                                                                <div class="p-2.5 rounded-3 border bg-light d-flex align-items-center gap-2 mt-2" style="border-color: #CBD5E1 !important;">
+                                                                    <div class="form-check m-0 d-flex align-items-center gap-2">
+                                                                        {{ field }}
+                                                                        <label class="form-check-label small fw-bold text-success m-0" for="{{ field.id_for_label }}">
+                                                                            ✔ Es la respuesta correcta
+                                                                        </label>
+                                                                    </div>
+                                                                </div>
+                                                            {% else %}
+                                                                <!-- Campo estándar para el texto de la alternativa (Choice.text) -->
+                                                                <div>
+                                                                    <label for="{{ field.id_for_label }}" class="form-label small fw-bold text-secondary mb-1">
+                                                                        Texto de la opción
+                                                                        {{ field }}
+                                                                    </label>
+                                                                </div>
+                                                            {% endif %}
+                                                        {% if field.errors %}
+                                                        {{ field.errors|striptags }}
+                                                        {% endif %}
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                    </div>
+                    <div class="d-flex flex-column flex-sm-row align-items-center justify-content-end gap-2 mt-5">
+                            <!-- El profesor regresa seguro al organizador modular o vista previa anterior -->
+                            <a href="javascript:history.back()" class="btn btn-outline-secondary w-100 w-sm-auto px-4 py-2.5 rounded-3 fw-semibold order-2 order-sm-1">
+                                Cancelar
+                            </a>
+
+                            <button type="submit" class="btn btn-emerald w-100 w-sm-auto px-4 py-2.5 rounded-3 d-flex align-items-center justify-content-center gap-2 fw-bold shadow-sm order-1 order-sm-2">
+                                <span>💾 Guardar pregunta</span>
+                            </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+document.addEventListener("DOMContentLoaded", function() {
+const form = document.getElementById('question-builder-form');
+if (!form) return;
+const fields = form.querySelectorAll('input, textarea, select');
+fields.forEach(function(field) {
+    if (field.type !== 'hidden' && field.type !== 'submit') {
+        if (field.type === 'checkbox') {
+            field.classList.add('form-check-input', 'border-success');
+            field.style.transform = 'scale(1.15)';field.style.cursor = 'pointer';
+        }else
+            if (field.tagName === 'SELECT') {
+                field.classList.add('form-select', 'rounded-3', 'py-2.5');
+            }else
+                {field.classList.add('form-control', 'rounded-3');
+                if (field.tagName === 'TEXTAREA') {field.setAttribute('rows', '3');
+                } else
+                    {field.classList.add('py-2.5');
+}}}});
+});
+{% endblock %}

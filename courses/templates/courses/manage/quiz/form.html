@@ -1,7 +1,7 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
 {% block title %}
-    {% if object %}Editar contenido: "{{ object.title }}"{% else %}Agregar nuevo contenido{% endif %} - EDUCA
+    {% if object %}Editar Quiz: {{ object.title }}{% else %}Crear Nuevo Quiz{% endif %} - EDUCA
 {% endblock %}
 
 {% block content %}
@@ -16,47 +16,46 @@
 <div class="bg-hueso py-5 min-vh-100 d-flex align-items-center justify-content-center">
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-md-10 col-lg-8 col-xl-7">
+            <div class="col-md-10 col-lg-7">
 
-                <!-- 🚀 TARJETA PRINCIPAL DEL FORMULARIO MULTIMEDIA -->
+                <!-- 🚀 TARJETA PRINCIPAL DEL CONFIGURADOR DE QUIZ -->
                 <div class="card border-0 shadow-sm p-4 p-md-5 bg-white" style="border-radius: 16px; border: 1px solid #E2E8F0 !important;">
 
-                    <!-- Encabezado Orientado a UX -->
+                    <!-- Encabezado Guiado (UX) -->
                     <div class="mb-4">
                         <span class="text-emerald text-uppercase fw-bold small tracking-wider d-block mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Panel del Instructor</span>
                         <h1 class="fw-extrabold text-slate h2 m-0" style="color: #0F172A !important;">
-                            {% if object %}Editar Lección{% else %}Agregar Nuevo Material{% endif %}
+                            {% if object %}Editar Estructura del Quiz{% else %}Configurar Nuevo Quiz{% endif %}
                         </h1>
-                        <p class="text-muted small mt-2">Introduce la información, enlaces o archivos multimedia correspondientes a este contenido de aprendizaje.</p>
+                        <p class="text-muted small mt-2">Define el título principal y las instrucciones generales de esta evaluación modular.</p>
                     </div>
 
                     <hr class="mb-4" style="color: #E2E8F0;">
 
-                    <!-- FORMULARIO DE RECOPILACIÓN MULTIMEDIA -->
-                    <form action="" method="post" enctype="multipart/form-data" novalidate id="multimedia-content-form">
+                    <!-- FORMULARIO DE ACCIÓN -->
+                    <form action="." method="post" id="quiz-config-form" novalidate>
                         {% csrf_token %}
 
-                        <!-- Contenedor con espaciado vertical armónico -->
+                        <!-- Contenedor con espaciado vertical armónico (gap-4) -->
                         <div class="d-flex flex-column gap-4 mb-4">
                             {% for field in form %}
-                                <div class="form-group">
+                                <!-- 🔒 OCULTAMOS EL SLUG AUTOMÁTICAMENTE SI EXISTE EN ESTE FORMULARIO -->
+                                <div class="form-group {% if field.name == 'slug' %}d-none{% endif %}">
                                     <label for="{{ field.id_for_label }}" class="form-label small fw-bold text-secondary mb-1">
                                         {{ field.label }}
                                     </label>
 
                                     <div class="input-group">
-                                        <!-- Renderizado del campo nativo de Django -->
                                         {{ field }}
 
-                                        <!-- Alertas de error elegantes de Bootstrap 5 -->
                                         {% if field.errors %}
-                                            <div class="invalid-feedback fw-semibold small d-block mt-1">
+                                            <div class="invalid-feedback d-block fw-semibold small mt-1">
                                                 {{ field.errors|striptags }}
                                             </div>
                                         {% endif %}
                                     </div>
 
-                                    {% if field.help_text %}
+                                    {% if field.help_text and field.name != 'slug' %}
                                         <div class="form-text text-muted small mt-1" style="font-size: 0.75rem;">
                                             {{ field.help_text|safe }}
                                         </div>
@@ -67,13 +66,13 @@
 
                         <!-- 💾 BOTONES DE CONTROL DE GESTIÓN (Guardar y Cancelar) -->
                         <div class="d-flex flex-column flex-sm-row align-items-center justify-content-end gap-2 mt-5">
-                            <!-- El profesor regresa seguro al organizador modular -->
+                            <!-- El profesor regresa seguro al organizador modular o vista previa anterior -->
                             <a href="javascript:history.back()" class="btn btn-outline-secondary w-100 w-sm-auto px-4 py-2.5 rounded-3 fw-semibold order-2 order-sm-1">
                                 Cancelar
                             </a>
 
                             <button type="submit" class="btn btn-emerald w-100 w-sm-auto px-4 py-2.5 rounded-3 d-flex align-items-center justify-content-center gap-2 fw-bold shadow-sm order-1 order-sm-2">
-                                <span>💾 Guardar Material</span>
+                                <span>💾 Guardar Evaluación</span>
                             </button>
                         </div>
 
@@ -88,35 +87,54 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- 🧠 SCRIPT COMPLEMENTARIO DE UX: Detecta de forma inteligente el tipo de input y le inyecta estilos Bootstrap 5 -->
+<!-- 🧠 ENGINE INTELIGENTE DE CONTROL DE CAMPOS Y SLUGS AUTOMÁTICOS -->
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        const form = document.getElementById('multimedia-content-form');
-        // Seleccionamos todas las cajas de texto, áreas de texto, selectores e inputs de archivos
-        const inputs = form.querySelectorAll('input, textarea, select');
+        const form = document.getElementById('quiz-config-form');
+        if (!form) return;
 
-        inputs.forEach(function(field) {
-            // Ignoramos los tokens ocultos de seguridad
+        const formFields = form.querySelectorAll('input, select, textarea');
+        let titleInput = null;
+        let slugInput = null;
+
+        formFields.forEach(function(field) {
             if (field.type !== 'hidden' && field.type !== 'submit') {
+                // Inyectamos las clases de control de Bootstrap 5 de forma nativa
+                field.classList.add('form-control', 'rounded-3');
 
-                // CASO A: Es un input de archivo (subida de PDFs, Imágenes)
-                if (field.type === 'file') {
-                    field.classList.add('form-control', 'rounded-3');
-                }
-                // CASO B: Es un menú desplegable nativo
-                else if (field.tagName === 'SELECT') {
-                    field.classList.add('form-select', 'rounded-3', 'py-2.5');
-                }
-                // CASO C: Es una casilla de verificación
-                else if (field.type === 'checkbox') {
-                    field.classList.add('form-check-input');
-                }
-                // CASO D: Cajas de texto estándar y Textareas
-                else {
-                    field.classList.add('form-control', 'rounded-3', 'py-2.5');
+                if (field.tagName === 'TEXTAREA') {
+                    field.setAttribute('rows', '4'); // Espacio generoso para las instrucciones del Quiz
+                } else {
+                    field.classList.add('py-2.5');
                 }
             }
+
+            // Identificamos las referencias exactas por si el formulario exige un slug explícito
+            if (field.name === 'title') titleInput = field;
+            if (field.name === 'slug') slugInput = field;
         });
+
+        // Lógica del Generador de Slugs en Tiempo Real (Mantenemos la regla de automatización invisible)
+        if (titleInput && slugInput) {
+            titleInput.addEventListener('input', function() {
+                let text = titleInput.value;
+
+                const from = "áéíóúüñÁÉÍÓÚÜÑ";
+                const to   = "aeiouunAEIOUUN";
+                for (let i = 0, l = from.length; i < l; i++) {
+                    text = text.replace(new RegExp(from.charAt(i), 'g'), to.charAt(i));
+                }
+
+                const slug = text
+                    .toLowerCase()
+                    .trim()
+                    .replace(/[^a-z0-9 -]/g, '')
+                    .replace(/\s+/g, '-')
+                    .replace(/-+/g, '-');
+
+                slugInput.value = slug;
+            });
+        }
     });
 </script>
 {% endblock %}

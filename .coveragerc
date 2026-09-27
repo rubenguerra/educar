@@ -1,0 +1,39 @@
+
+[run]
+source = .
+omit =
+    *apps.py
+    *migrations*
+    *settings*
+    *urls.py
+    *wsgi.py
+    *asgi.py
+    manage.py
+    .venv/*
+    venv/*
+    *\.venv\*
+    *venv\*
+
+[report]
+show_missing = True
+
+# Omitirá archivos específicos y carpetas completas en la ejecución
+omit =
+    # Carpetas de entornos virtuales históricas
+    .venv/*
+    venv/*
+    # 📦 Exclusión de todas las carpetas de migraciones de Django
+    */migrations/*
+    # 🐍 Exclusión de todos los archivos de inicialización de paquetes Python
+    */__init__.py
+    # Exclusión de archivos de configuración base de Django
+    educa/asgi.py
+    educa/wsgi.py
+    manage.py
+
+
+# Evita que se evalúe el código muerto que no puede ejecutarse en los tests
+exclude_lines =
+    pragma: no cover
+    def __str__
+    if __name__ == .__main__.:

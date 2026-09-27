@@ -2,76 +2,213 @@
 {% load course %}
 
 {% block title %}
-Módulo {{ module.order|add:1 }}: {{ module.title }}
+    Módulo {{ module.order|add:1 }}: {{ module.title }} - EDUCA
 {% endblock %}
 
 {% block content %}
 {% with course=module.course %}
-<h1>Curso "{{ course.title }}"</h1>
-<div class="contents">
-    <h3>Módulos</h3>
-    <ul id="modules">
-        {% for m in course.modules.all %}
-        <li data-id="{{ m.id }}" {% if m == module %} class="selected" {% endif %}>
-            <a href="{% url 'module_content_list' m.id %}">
-                <span>
-                    Módulo <span class="order">{{ m.order|add:1 }}</span>
-                </span>
-                <br>
-                {{ m.title }}
-            </a>
-        </li>
-        {% empty %}
-        <li>No hay módulos aún.</li>
-        {% endfor %}
-    </ul>
-    <p><a href="{% url 'course_module_update' course.id %}">
-        Editar módulos
-    </a></p>
-</div>
-<div class="module">
-    <h2>Modulo {{ module.order|add:1 }}: {{ module.title }}</h2>
-    <h3>Contenido de modulo:</h3>
-    <div id="module-contents">
-        {% for content in module.contents.all %}
-        <div data-id="{{ content.id }}">
-            {% with item=content.item %}
-            <p>{{ item }} ({{ item|model_name }})</p>
-            <a href="{% url 'module_content_update' module.id item|model_name item.id %}">Editar</a>
-            <form action="{% url 'module_content_delete' content.id %}" method="post">
-                <input type="submit" value="Eliminar">
-                {% csrf_token %}
-            </form>
-            {% endwith %}
+<style>
+    .bg-hueso { background-color: #F8F9FA; }
+    .text-slate { color: #0F172A; }
+    .text-emerald { color: #10B981 !important; }
+    .btn-emerald { background-color: #10B981; color: white; border: none; font-weight: 600; }
+    .btn-emerald:hover { background-color: #059669; color: white; }
+
+    /* Indicador visual de que un elemento se puede arrastrar (UX Drag & Drop) */
+    .draggable-item {
+        cursor: grab;
+        border: 1px solid #E2E8F0;
+        border-radius: 12px;
+        background-color: #FFFFFF;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .draggable-item:active { cursor: grabbing; }
+    .draggable-item:hover {
+        border-color: #10B981;
+        box-shadow: 0 6px 12px rgba(15, 23, 42, 0.03);
+    }
+
+    /* Módulo seleccionado en el menú lateral */
+    .module-nav-item {
+        border-radius: 8px !important;
+        border: 1px solid transparent !important;
+        margin-bottom: 4px;
+        transition: all 0.2s;
+    }
+    .module-nav-item.selected-active {
+        background-color: #0F172A !important;
+        color: #FFFFFF !important;
+        font-weight: 600;
+    }
+    .sticky-sidebar { position: sticky; top: 90px; }
+</style>
+
+<div class="bg-hueso py-4 min-vh-100">
+    <div class="container-fluid px-lg-5">
+
+        <!-- 🚀 ENCABEZADO DE CONTROL DEL CURSO -->
+        <header class="mb-4 d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 bg-white p-4 rounded-4 shadow-sm border" style="border-color: #E2E8F0 !important;">
+            <div>
+                <span class="text-emerald text-uppercase fw-bold small tracking-wider d-block mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Estructura del Programa</span>
+                <h1 class="h3 fw-extrabold text-slate m-0">Curso: "{{ course.title }}"</h1>
+            </div>
+            <div>
+                <a href="{% url 'courses:manage_course_list' %}" class="btn btn-outline-secondary px-3 py-2 rounded-3 fw-semibold btn-sm">
+                    🎛️ Volver al Panel General
+                </a>
+            </div>
+        </header>
+
+        <div class="row g-4">
+
+            <!-- 📁 COLUMNA IZQUIERDA: GESTOR DE MÓDULOS CON DRAG & DROP (4 de 12 columnas) -->
+            <aside class="col-xl-4 col-lg-5">
+                <div class="sticky-sidebar bg-white p-4 rounded-4 shadow-sm border" style="border-color: #E2E8F0 !important;">
+                    <div class="mb-3">
+                        <h2 class="h6 text-uppercase fw-bold text-secondary m-0" style="font-size: 0.8rem; letter-spacing: 0.5px;">Módulos del Curso</h2>
+                        <small class="text-muted" style="font-size: 0.75rem;">↕️ Arrastra los bloques para reordenar el temario</small>
+                    </div>
+
+                    <!-- Contenedor ID 'modules' requerido por tu Script JQuery UI Sortable -->
+                    <div class="list-group list-group-flush" id="modules">
+                        {% for m in course.modules.all %}
+                            <div data-id="{{ m.id }}" class="list-group-item list-group-item-action module-nav-item {% if m == module %}selected-active{% endif %} p-3 d-flex align-items-center justify-content-between" style="cursor: grab;">
+                                <a href="{% url 'courses:module_content_list' m.id %}" class="text-decoration-none text-inherit w-100 {% if m == module %}text-white{% else %}text-slate{% endif %}">
+                                    <span class="d-block small text-uppercase opacity-75 fw-bold" style="font-size: 0.65rem;">
+                                        Módulo <span class="order">{{ m.order|add:1 }}</span>
+                                    </span>
+                                    <span class="fs-6 d-block mt-0.5">{{ m.title }}</span>
+                                </a>
+                            </div>
+                        {% empty %}
+                            <div class="text-muted small italic p-2 text-center">No hay módulos creados aún.</div>
+                        {% endfor %}
+                    </div>
+
+                    <hr class="my-4" style="color: #E2E8F0;">
+
+                    <a href="{% url 'courses:module_content_create' module.id 'quiz' %}" class="btn btn-emerald w-100 py-2.5 rounded-3 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2">
+                            📝 <span>Elaborar Nuevo Quiz</span>
+                    </a>
+                    <hr class="my-2" style="color: #E2E8F0;">
+
+                    <a href="{% url 'courses:course_module_update' course.id %}" class="btn btn-outline-dark w-100 py-2 rounded-3 fw-semibold btn-sm">
+                        ⚙️ Editar o Añadir Módulos
+                    </a>
+                </div>
+            </aside>
+
+            <!-- 🖥️ COLUMNA DERECHA: ESPACIO DE EDICIÓN MULTIMEDIA (8 de 12 columnas) -->
+            <main class="col-xl-8 col-lg-7">
+                <div class="bg-white p-4 p-md-5 rounded-4 shadow-sm border h-100" style="border-color: #E2E8F0 !important; min-height: 70vh;">
+
+                    <!-- Cabecera del Módulo Seleccionado -->
+                    <div class="mb-4">
+                        <span class="text-muted small fw-bold">Gestionando contenidos de forma activa:</span>
+                        <h2 class="h4 fw-extrabold text-slate m-0 mt-1">📦 Módulo {{ module.order|add:1 }}: {{ module.title }}</h2>
+                    </div>
+
+                    <!-- ➕ HUB DE INYECCIÓN DE NUEVO MATERIAL POLIMÓRFICO (UX Tipo Hub) -->
+                    <div class="p-4 rounded-4 mb-5 border text-center" style="background-color: #F8F9FA; border-style: dashed !important; border-color: #CBD5E1 !important;">
+                        <h3 class="h6 fw-bold text-secondary text-uppercase mb-3" style="font-size: 0.75rem; letter-spacing: 0.5px;">Añadir nuevo material didáctico</h3>
+                        <div class="d-flex flex-wrap justify-content-center gap-2">
+                            <a href="{% url 'courses:module_content_create' module.id 'text' %}" class="btn btn-white border px-3 py-2 rounded-3 small fw-semibold text-slate shadow-sm" style="font-size: 0.85rem;">📄 Texto plano</a>
+                            <a href="{% url 'courses:module_content_create' module.id 'image' %}" class="btn btn-white border px-3 py-2 rounded-3 small fw-semibold text-slate shadow-sm" style="font-size: 0.85rem;">🖼️ Imagen explicativa</a>
+                            <a href="{% url 'courses:module_content_create' module.id 'video' %}" class="btn btn-white border px-3 py-2 rounded-3 small fw-semibold text-slate shadow-sm" style="font-size: 0.85rem;">▶️ Video enriquecido</a>
+                            <a href="{% url 'courses:module_content_create' module.id 'file' %}" class="btn btn-white border px-3 py-2 rounded-3 small fw-semibold text-slate shadow-sm" style="font-size: 0.85rem;">🗂️ Documento / PDF</a>
+                        </div>
+                    </div>
+
+                                        <!-- 📋 LISTADO DE LECCIONES CON DRAG & DROP (Actualizado con accesos para Quizzes) -->
+                    <div class="mb-3 d-flex justify-content-between align-items-center">
+                        <h3 class="h6 fw-bold text-uppercase text-secondary m-0" style="font-size: 0.75rem; letter-spacing: 0.5px;">Lecciones cargadas</h3>
+                        <small class="text-muted" style="font-size: 0.72rem;">↕️ Arrastra las tarjetas para cambiar su orden de lectura</small>
+                    </div>
+
+                    <div class="d-flex flex-column gap-3" id="module-contents">
+                        {% for content in module.contents.all %}
+                            <div data-id="{{ content.id }}" class="draggable-item p-3 shadow-sm d-flex flex-column flex-md-row align-items-md-center gap-3">
+                                {% with item=content.item %}
+
+                                    <!-- Identificador Visual e Iconografía UX -->
+                                    <div class="d-flex align-items-center gap-3 me-md-auto">
+                                        <span class="fs-4">
+                                            {% if item|model_name == 'quiz' %}📝{% elif item|model_name == 'video' %}▶️{% elif item|model_name == 'image' %}🖼️{% else %}📄{% endif %}
+                                        </span>
+                                        <div>
+                                            <h4 class="h6 fw-bold text-slate m-0">{{ item.title }}</h4>
+                                            <span class="badge bg-light text-secondary rounded-2 px-2 py-1 mt-1 border text-uppercase" style="font-size: 0.6rem; font-weight: 700;">
+                                                {{ item|model_name }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Bloque de acciones (Condicionado inteligentemente para Quizzes) -->
+                                    <div class="d-flex gap-1 align-self-start align-self-md-center mt-2 mt-md-0 flex-wrap">
+
+                                        <!-- 🎯 ATAJO DE UX EXCLUSIVO PARA QUIZZES: Gestionar su banco de preguntas -->
+                                        {% if item|model_name == 'quiz' %}
+                                            <a href="{% url 'courses:quiz_question_list' item.id %}" class="btn btn-emerald btn-sm px-3 py-1.5 rounded-2 fw-bold shadow-sm" style="font-size: 0.8rem;">
+                                                ❓ <span>Gestionar Preguntas</span>
+                                            </a>
+                                        {% endif %}
+
+                                        <!-- Botón Estructural: Editar Ajustes Base (Título, Descripción) -->
+                                        <a href="{% url 'courses:module_content_update' module.id item|model_name item.id %}" class="btn btn-outline-secondary btn-sm px-3 py-1.5 rounded-2 fw-semibold" style="font-size: 0.8rem;">
+                                            ✏️ <span>Ajustes</span>
+                                        </a>
+
+                                        <!-- Formulario Estructural: Eliminar de Raíz el Contenido -->
+                                        <form action="{% url 'courses:module_content_delete' content.id %}" method="post" class="m-0">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-outline-danger btn-sm px-3 py-1.5 rounded-2 fw-semibold" style="font-size: 0.8rem;">
+                                                🗑️ Eliminar
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                {% endwith %}
+                            </div>
+                        {% empty %}
+                            <div class="text-center py-5 text-muted border border-dashed rounded-4">
+                                <span class="display-5 d-block mb-2">📥</span>
+                                <p class="small m-0 italic text-secondary">Este módulo aún no tiene lecciones. Utiliza el hub de arriba para inyectar tu primer material didáctico.</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+
+                </div>
+
+            </main>
         </div>
-        {% empty %}
-        <p>Este módulo no tiene contenido aún.</p>
-        {% endfor %}
     </div>
-    <h3>Agregar nuevo contenido:</h3>
-    <ul class="content-types">
-        <li><a href="{% url 'module_content_create' module.id 'text' %}">Texto</a></li>
-        <li><a href="{% url 'module_content_create' module.id 'image' %}">Imagen</a></li>
-        <li><a href="{% url 'module_content_create' module.id 'video' %}">Video</a></li>
-        <li><a href="{% url 'module_content_create' module.id 'file' %}">Archivo</a></li>
-    </ul>
 </div>
 {% endwith %}
 {% endblock %}
 
 {% block domready %}
+/* 🧠 LÓGICA DE ORDENAMIENTO REFINADA PARA RUTAS CON PARÁMETROS DINÁMICOS */
 $('#modules').sortable({
     stop: function(event, ui){
         modules_order = {};
         $('#modules').children().each(function(){
-            // Actualiza el campo orden
+            // Actualiza el campo orden visualmente en la insignia
             $(this).find('.order').text($(this).index() + 1);
-            // Liga el id del módulo con su orden
+            // Liga el id del módulo con su orden numérico
             modules_order[$(this).data('id')] = $(this).index();
         });
+
+
+        // Obtenemos el índice del elemento que se acaba de mover
+        var currentOrder = ui.item.index();
+
+        // Creamos la ruta de forma manual apuntando al namespace oficial del servidor
+        var ajaxUrl = '/courses/module/' + currentOrder + '/';
+
         $.ajax({
             type: 'POST',
-            url: '{% url "module_order" %}',
+            url: ajaxUrl, // Usamos la variable de JS pura en lugar de la etiqueta de Django
             contentType: 'application/json; charset=utf-8',
             dataType: 'json',
             data: JSON.stringify(modules_order)
@@ -83,13 +220,18 @@ $('#module-contents').sortable({
     stop: function(event, ui){
         contents_order = {};
         $('#module-contents').children().each(function(){
-            // Asocia el id del módulo con su orden
+            // Asocia el id del contenido genérico con su orden numérico
             contents_order[$(this).data('id')] = $(this).index();
         });
 
+        // Hacemos lo mismo para el ordenamiento de los contenidos internos
+
+        // Para asegurar que no tire más fallos de compilación, usamos su ruta estática oficial:
+        var contentUrl = '/courses/content/order/';
+
         $.ajax({
             type: 'POST',
-            url: '{% url "content_order" %}',
+            url: contentUrl,
             contentType: 'application/json; charset=utf-8',
             dataType: 'json',
             data: JSON.stringify(contents_order),

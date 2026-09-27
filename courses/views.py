@@ -1,26 +1,27 @@
 from django.shortcuts import redirect, get_object_or_404, render
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.decorators import login_required
-from django.views.generic.base import TemplateResponseMixin, View
+from django.views.generic.base import TemplateResponseMixin
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
-from django.views.generic.list import ListView
+from django.views.generic import ListView,View
 from django.views.generic.detail import DetailView
-from django.forms.models import modelform_factory
+from django.forms.models import modelform_factory, inlineformset_factory
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.db.models import Count
+from django.db import transaction
 from django.apps import apps
 from django.core.cache import cache
 from openai import OpenAI
 from braces.views import CsrfExemptMixin, JsonRequestResponseMixin
-from .models import Course, Module, Content, Subject, CourseAnalytics
+from .models import Course, Module, Content, Subject, CourseAnalytics, Quiz, Question, Choice
 from .forms import ModuleFormSet
 from students.models import ChatMessage
 from students.forms import CourseEnrollForm
 
 
-class OwnerMixin(object):
 
+class OwnerMixin(object):
     """Filtra los QuerySets para asegurar que el usuario opere solo en sus registros."""
     def get_queryset(self):
         return super().get_queryset().filter(owner=self.request.user)
@@ -36,7 +37,7 @@ class OwnerEditMixin(object):
 class OwnerCourseMixin(OwnerMixin, LoginRequiredMixin, PermissionRequiredMixin):
     model = Course
     fields = ['subject', 'title', 'slug', 'overview']
-    success_url = reverse_lazy('manage_course_list')
+    success_url = reverse_lazy('courses:manage_course_list')
 
 
 class OwnerCourseEditMixin(OwnerCourseMixin, OwnerEditMixin):
@@ -82,7 +83,7 @@ class CourseModuleUpdateView(TemplateResponseMixin, View):
         formset = self.get_formset(data=request.POST)
         if formset.is_valid():
             formset.save()
-            return redirect('manage_course_list')
+            return redirect('courses:manage_course_list')
         return self.render_to_response({'course': self.course,
                                         'formset': formset})
 
@@ -123,7 +124,7 @@ class ContentCreateUpdateView(TemplateResponseMixin, View):
             obj.save()
             if not id:
                 Content.objects.create(module=self.module, item=obj)
-            return redirect('module_content_list', self.module.id)
+            return redirect('courses:module_content_list', self.module.id)
         return self.render_to_response({'form': form, 'object': self.obj})
 
 
@@ -133,7 +134,7 @@ class ContentDeleteView(View):
         module = content.module
         content.item.delete()
         content.delete()
-        return redirect('module_content_list', module.id)
+        return redirect('courses:module_content_list', module.id)
 
 
 class ModuleContentListView(TemplateResponseMixin, View):
@@ -244,3 +245,80 @@ def generate_course_ai_analytics(request, course_id):
         return redirect('courses:course_ai_analytics', course.id)
     return render(request, 'courses/manage/analytics/report.html',
                   {'course':course, 'report': latest_report})
+
+
+# ➔ VISTA 1: LISTADO DE PREGUNTAS DEL QUIZ (Cabina de control del profesor)
+class QuizQuestionListView(TemplateResponseMixin, View):
+    template_name = 'courses/manage/quiz/question_list.html'
+
+    def get(self, request, quiz_id):
+        # Aseguramos que el Quiz pertenezca al profesor logueado
+        quiz = get_object_or_404(Quiz, id=quiz_id, owner=request.user)
+        return self.render_to_response({'quiz': quiz})
+
+
+# ➔ VISTA 2: CREAR / EDITAR PREGUNTA CON SUS OPCIONES CHOICE (Formset Anidado Seguro)
+class QuizQuestionCreateUpdateView(TemplateResponseMixin, View):
+    template_name = 'courses/manage/quiz/question_form.html'
+
+    def get_inline_formset(self, post_data=None):
+        """Construye un Formset en línea para asociar Choices a una Question."""
+        # Creamos una fábrica que exige mínimo 4 opciones y permite editarlas juntas
+        ChoiceFormSet = inlineformset_factory(
+            Question,
+            Choice,
+            fields=['text', 'is_correct'],
+            extra=4,  # Muestra 4 casillas vacías al crear
+            max_num=6,  # Límite máximo de alternativas por pregunta
+            can_delete=True
+        )
+        return ChoiceFormSet(data=post_data, instance=self.obj)
+
+    def dispatch(self, request, quiz_id, id=None):
+        """Carga el Quiz y la Pregunta asegurando los permisos del docente."""
+        self.quiz = get_object_or_404(Quiz, id=quiz_id, owner=request.user)
+        self.obj = None
+        if id:
+            self.obj = get_object_or_404(Question, id=id, quiz=self.quiz)
+        return super().dispatch(request, quiz_id, id)
+
+    def get(self, request, quiz_id, id=None):
+        # Si editamos, form se rellena con la pregunta; si es nueva, viene vacío
+        from django.forms import modelform_factory
+        QuestionForm = modelform_factory(Question, fields=['text', 'order'])
+        form = QuestionForm(instance=self.obj)
+        formset = self.get_inline_formset()
+
+        return self.render_to_response({
+            'quiz': self.quiz,
+            'form': form,
+            'formset': formset,
+            'object': self.obj
+        })
+
+    def post(self, request, quiz_id, id=None):
+        from django.forms import modelform_factory
+        QuestionForm = modelform_factory(Question, fields=['text', 'order'])
+        form = QuestionForm(instance=self.obj, data=request.POST)
+        formset = self.get_inline_formset(post_data=request.POST)
+
+        # Usamos un bloque atómico de base de datos por seguridad
+        # Si la pregunta se guarda pero el formset de opciones falla, Git/Django deshacen todo (Rollback)
+        if form.is_valid() and formset.is_valid():
+            with transaction.atomic():
+                question = form.save(commit=False)
+                question.quiz = self.quiz
+                question.save()
+
+                # Sincronizamos el formset pasándole la pregunta guardada como padre
+                formset.instance = question
+                formset.save()
+
+            return redirect('courses:quiz_question_list', self.quiz.id)
+
+        return self.render_to_response({
+            'quiz': self.quiz,
+            'form': form,
+            'formset': formset,
+            'object': self.obj
+        })
