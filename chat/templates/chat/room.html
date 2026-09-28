@@ -1,108 +1,207 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
-{% block title %}
-    Sala de Chat: {{ course.title }}
-{% endblock %}
+{% block title %}Sala de Chat: {{ course.title }} - EDUCA{% endblock %}
 
 {% block content %}
-<h1>Sala de chat - {{ course.title }}</h1>
+<style>
+    .bg-hueso { background-color: #F8F9FA; }
+    .text-slate { color: #0F172A; }
+    .text-emerald { color: #10B981 !important; }
+    .btn-emerald { background-color: #10B981; color: white; border: none; font-weight: 600; }
+    .btn-emerald:hover { background-color: #059669; color: white; }
 
-<!-- Contenedor del Chat -->
-<div id="chat" style="border: 1px solid #ccc; padding: 15px; height: 400px; overflow-y: scroll; margin-bottom: 20px;">
+    /* Área interactiva del log de mensajes con scroll automático */
+    .chat-messages-box {
+        height: 60vh;
+        overflow-y: auto;
+        background-color: #FAFAFA;
+        border: 1px solid #E2E8F0;
+        border-radius: 12px;
+        padding: 20px;
+    }
 
-    <!-- 1. RENDERIZADO DEL HISTORIAL DE MENSAJES (BASE DE DATOS) -->
-    {% for message in chat_messages %}
-        <div class="message {% if message.user == request.user %}me{% else %}other{% endif %}">
-            <strong>
-                {% if message.user == request.user %}Me{% else %}{{ message.user.username }}{% endif %}
-            </strong>
-            <span class="date">{{ message.created|date:"g:i A" }}</span>
-            <br>
-            <span>{{ message.message|linebreaksbr }}</span>
+    /* Burbujas de chat ergonómicas */
+    .message-bubble {
+        max-width: 75%;
+        padding: 12px 16px;
+        border-radius: 16px;
+        font-size: 0.95rem;
+        line-height: 1.4;
+        margin-bottom: 12px;
+        position: relative;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    }
+    .message-me {
+        background-color: #DCFCE7; /* Verde Menta Suave */
+        color: #14532D;
+        border-bottom-right-radius: 4px;
+        align-self: flex-end;
+    }
+    .message-others {
+        background-color: #FFFFFF; /* Blanco limpio */
+        color: #334155;
+        border-bottom-left-radius: 4px;
+        border: 1px solid #E2E8F0;
+        align-self: flex-start;
+    }
+</style>
+
+<div class="bg-hueso py-4 min-vh-100">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-xl-9 col-lg-10">
+
+                <!-- 🚀 ENCABEZADO DE LA SALA DE CHAT -->
+                <header class="mb-4 d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 bg-white p-4 rounded-4 shadow-sm border" style="border-color: #E2E8F0 !important;">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="fs-2">💬</span>
+                        <div>
+                            <span class="text-emerald text-uppercase fw-bold small tracking-wider d-block mb-0.5" style="font-size: 0.75rem; letter-spacing: 0.5px;">Foro en Tiempo Real</span>
+                            <h1 class="h4 fw-extrabold text-slate m-0">Sala de Discusión: {{ course.title }}</h1>
+                        </div>
+                    </div>
+                    <div>
+                        <!-- Enlace de regreso seguro al espacio de aprendizaje -->
+                        <a href="{% url 'students:student_course_detail' course.id %}" class="btn btn-outline-secondary px-3 py-2 rounded-3 fw-semibold btn-sm">
+                            📖 Volver a la Ruta
+                        </a>
+                    </div>
+                </header>
+
+                <!-- 🖥️ CONTENEDOR PRINCIPAL DEL CHAT -->
+                <div class="bg-white p-4 rounded-4 shadow-sm border" style="border-color: #E2E8F0 !important;">
+
+                    <!-- 📦 CAJA DE LOG DE MENSAJES (Scroll independiente) -->
+                    <!-- Flexbox en columna invertida o reversa para inyectar burbujas dinámicas -->
+                    <div class="chat-messages-box d-flex flex-column gap-2" id="chat-log">
+
+                        <!-- Mensaje de bienvenida de UX del sistema -->
+                        <div class="text-center my-3 small text-muted bg-light p-2 rounded-3 border mx-auto" style="max-width: 320px; font-size: 0.8rem;">
+                            🔒 Conexión encriptada. El foro se limpia al cerrar el ciclo.
+                        </div>
+
+                        <!-- Ejemplo estático de burbuja ajena (Para visualización) -->
+                        <div class="message-bubble message-others">
+                            <span class="d-block fw-bold text-slate mb-1" style="font-size: 0.75rem;">@compañero_estudio</span>
+                            <span>Hola a todos, ¿alguien entendió la última pregunta del Quiz del Módulo 2? Me quedé trabado ahí.</span>
+                            <span class="d-block text-end text-muted mt-1" style="font-size: 0.65rem;">09:15 AM</span>
+                        </div>
+
+                        <!-- Ejemplo estático de burbuja propia (Para visualización) -->
+                        <div class="message-bubble message-me">
+                            <span class="d-block fw-bold text-emerald mb-1" style="font-size: 0.75rem;">Tú ({{ request.user.username }})</span>
+                            <span>¡Hola! Sí, dale una revisada a la lectura de apoyo sobre matrices de la bitácora izquierda, ahí viene la clave de la respuesta.</span>
+                            <span class="d-block text-end text-success mt-1" style="font-size: 0.65rem; opacity: 0.7;">09:17 AM</span>
+                        </div>
+
+                    </div>
+
+                    <!-- 📥 BARRA DE ENTRADA DE MENSAJES (Fricción Cero) -->
+                    <div class="mt-4 pt-3 border-top">
+                        <div class="input-group">
+                            <input type="text"
+                                   id="chat-message-input"
+                                   class="form-control rounded-3 py-2.5 px-3 border"
+                                   style="border-color: #CBD5E1 !important;"
+                                   placeholder="Escribe un mensaje para el grupo de estudio..."
+                                   aria-label="Mensaje de chat"
+                                   maxlength="500">
+
+                            <!-- Botón verde menta de envío directo -->
+                            <button class="btn btn-emerald px-4 rounded-3 d-flex align-items-center justify-content-center gap-2"
+                                    type="button"
+                                    id="chat-message-submit">
+                                <span>Enviar</span> 🚀
+                            </button>
+                        </div>
+                        <div class="form-text text-muted mt-2" style="font-size: 0.72rem;">
+                            💡 Procura mantener una comunicación respetuosa y colaborativa con tus compañeros de clase.
+                        </div>
+                    </div>
+
+                </div> <!-- Cierre tarjeta blanca -->
+
+            </div>
         </div>
-    {% empty %}
-        <p id="no-messages">No hay mensajes en esta sala. ¡Sé el primero en escribir!</p>
-    {% endfor %}
-</div>
-<!-- Formulario para enviar nuevos mensajes -->
-
-  <form id="chat-form">
-    <div style="display: flex; gap: 10px;">
-        <input id="chat-message-input" type="text" placeholder="Escribe un mensaje aquí..." style="flex-grow: 1; padding: 10px;" autocomplete="off">
-        <input id="chat-message-submit" type="submit" value="Enviar" style="padding: 10px 20px;">
     </div>
-</form>
-
-
-
-
-
+</div>
 <!-- Pasamos el usuario de forma segura a JavaScript -->
 {{ request.user.username|json_script:"user-name-data" }}
 {% endblock %}
 
-
 {% block domready %}
-// 1. Configuración inicial del WebSocket
-var url = 'ws://' + window.location.host + '/ws/chat/room/' + '{{ course.id }}/';
-var chatSocket = new WebSocket(url);
+    // 1. Configuración de variables de contexto pasadas de Django a JS
+    var courseId = "{{ course.id }}";
+    var requestUser = "{{ request.user.username }}";
 
-const currentUser = JSON.parse(document.getElementById('user-name-data').textContent);
-const $chat = $('#chat');
+    // 2. Establecer la conexión WebSocket dinámica (Soporta HTTP y HTTPS seguros)
+    var wsScheme = window.location.protocol == "https:" ? "wss://" : "ws://";
+    var chatSocket = new WebSocket(
+        wsScheme + window.location.host + '/ws/chat/room/' + courseId + '/'
+    );
 
-// Auto-scroll inicial para ver el historial más reciente abajo
-$chat.scrollTop($chat[0].scrollHeight);
+    var chatLog = document.getElementById('chat-log');
+    var messageInput = document.getElementById('chat-message-input');
+    var messageSubmit = document.getElementById('chat-message-submit');
 
-// 2. Recepción de mensajes en tiempo real
-chatSocket.onmessage = function(e){
-    const data = JSON.parse(e.data);
-    const message = data.message;
+    // Auto-scroll inicial al fondo del contenedor al abrir el aula
+    chatLog.scrollTop = chatLog.scrollHeight;
 
-    // Removemos el aviso de "No hay mensajes" si aparece el primero en vivo
-    $('#no-messages').remove();
+    // 🚀 3. RECEPCIÓN DE MENSAJES EN TIEMPO REAL (Renderizado de Burbujas Ergonómicas)
+    chatSocket.onmessage = function(e) {
+        var data = JSON.parse(e.data);
+        var message = data.message;
+        var username = data.user;
+        var datetime = data.datetime || new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
-    // Control de fallos para la fecha
-    const dateSource = data.datetime ? new Date(data.datetime) : new Date();
-    const dateOptions = { hour: 'numeric', minute: 'numeric', hour12: true };
-    const datetime = dateSource.toLocaleString('en', dateOptions);
+        // Determinamos el rol visual del mensaje comparando el usuario
+        var isMe = (username === requestUser);
+        var bubbleClass = isMe ? 'message-me' : 'message-others';
+        var nameLabel = isMe ? 'Tú (' + username + ')' : '@' + username;
+        var labelClass = isMe ? 'text-emerald' : 'text-slate';
+        var opacityClass = isMe ? 'style="opacity: 0.7;"' : '';
 
-    // Verificación de identidad
-    const isMe = data.user === currentUser;
-    const source = isMe ? 'me' : 'other';
-    const name = isMe ? 'Yo' : (data.user || 'Anonymous');
+        // Creamos la estructura HTML de la nueva burbuja integrada con Bootstrap 5
+        var newMessageHtml = `
+            <div class="message-bubble ${bubbleClass}">
+                <span class="d-block fw-bold ${labelClass} mb-1" style="font-size: 0.75rem;">${nameLabel}</span>
+                <span>${message}</span>
+                <span class="d-block text-end text-muted mt-1" style="font-size: 0.65rem;" ${opacityClass}>${datetime}</span>
+            </div>
+        `;
 
+        // Inyectamos la burbuja al final del registro y forzamos el scroll al fondo inmediato (UX Premium)
+        chatLog.insertAdjacentHTML('beforeend', newMessageHtml);
+        chatLog.scrollTop = chatLog.scrollHeight;
+    };
 
-    const $messageDiv = $('<div>').addClass('message ' + source);
-    $messageDiv.html('<strong>' + name + '</strong> <span class="date">' + datetime + '</span><br>');
+    // 🔒 4. CIERRE INESPERADO DEL CANAL ASGI
+    chatSocket.onclose = function(e) {
+        console.error('La sala de chat se cerró inesperadamente de forma remota.');
+    };
 
-    // .text() protege contra ataques de Inyección HTML o Scripts (XSS)
-    const $messageText = '<span>' + $('<span>').text(message).html() + '</span>';
-
-    $messageDiv.append($messageText);
-    $chat.append($messageDiv);
-
-    // Autoscroll instantáneo al recibir mensaje en vivo
-    $chat.scrollTop($chat[0].scrollHeight);
-};
-
-chatSocket.onclose = function(e){
-    console.error('El socket del chat se cerró de forma inesperada');
-};
-
-// 3. Envío de mensajes
-var $input = $('#chat-message-input');
-var $submit = $('#chat-message-submit');
-
-$('#chat-form').submit(function(e){
-    e.preventDefault(); // Evitamos que el formulario intente recargar la página completa
-
-    var message = $input.val().trim(); // Eliminamos espacios en blanco accidentales
-    if (message){
-        chatSocket.send(JSON.stringify({'message': message}));
-        $input.val('');
-        $input.focus();
+    // ✉️ 5. ENVÍO DE MENSAJES (Captura de Eventos de Clic y Tecla Enter)
+    function sendMessage() {
+        var message = messageInput.value.trim();
+        if(message) {
+            chatSocket.send(JSON.stringify({
+                'message': message
+            }));
+            messageInput.value = ''; // Limpiamos la barra de entrada de fricción cero
+            messageInput.focus();
+        }
     }
-});
 
-$input.focus();
+    messageSubmit.addEventListener('click', function(e) {
+        e.preventDefault();
+        sendMessage();
+    });
+
+    messageInput.addEventListener('keyup', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
 {% endblock %}
+

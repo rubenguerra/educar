@@ -18,17 +18,36 @@
     <div class="container-fluid px-lg-5">
         <div class="row g-4">
 
-            <!-- 📄 COLUMNA IZQUIERDA: LA BITÁCORA DEL VIAJE (4 de 12 columnas) -->
+                        <!-- 📄 COLUMNA IZQUIERDA: LA BITÁCORA DEL VIAJE (4 de 12 columnas) -->
             <aside class="col-xl-4 col-lg-5">
                 <div class="sticky-sidebar bg-white p-4 rounded-4 shadow-sm border" style="border-color: #E2E8F0 !important;">
 
-                    <!-- Encabezado del Progreso -->
+
+                                        <!-- Encabezado del Progreso -->
                     <div class="mb-4">
                         <span class="text-emerald text-uppercase fw-bold small tracking-wider d-block mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">Mi Ruta de Aprendizaje</span>
                         <h1 class="h4 fw-extrabold text-slate m-0" style="line-height: 1.2;">{{ course.title }}</h1>
                     </div>
 
+                    <!-- 🎛️ PANEL DE CONTROL DE UX: ATAJOS DE NAVEGACIÓN PARALELOS (Fricción Cero) -->
+                    <div class="row g-2 mb-4">
+                        <!-- 🏠 BOTÓN A: Regresar al Tablero Principal (Mis Cursos) -->
+                        <div class="col-6">
+                            <a href="{% url 'students:student_course_list' %}" class="btn btn-outline-secondary w-100 py-2 rounded-3 fw-semibold text-center d-flex align-items-center justify-content-center gap-1 small" style="font-size: 0.82rem;">
+                                🏠 <span>Mis Cursos</span>
+                            </a>
+                        </div>
+
+                        <!-- 💬 BOTÓN B: Entrar a la Sala de Discusión en Tiempo Real -->
+                        <div class="col-6">
+                            <a href="{% url 'chat:course_chat_room' course.id %}" class="btn btn-outline-dark w-100 py-2 rounded-3 fw-bold text-center d-flex align-items-center justify-content-center gap-1 bg-light small" style="border-color: #CBD5E1 !important; font-size: 0.82rem;">
+                                💬 <span>Chat Aula</span>
+                            </a>
+                        </div>
+                    </div>
+
                     <hr class="my-3" style="color: #E2E8F0;">
+
 
                     <!-- MAPA CRONOLÓGICO DE MÓDULOS -->
                     <div class="d-flex flex-column gap-4">
